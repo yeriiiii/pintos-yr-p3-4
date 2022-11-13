@@ -6,7 +6,6 @@
 #include "threads/interrupt.h"
 #include "threads/io.h"
 #include "threads/synch.h"
-#include "threads/thread.h"
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -89,12 +88,15 @@ timer_elapsed (int64_t then) {
 
 /* Suspends execution for approximately TICKS timer ticks. */
 void
-timer_sleep (int64_t ticks) {
+timer_sleep (int64_t ticks) { // thread를 ready_list 에서 제거, sleep queue 에 추가
 	int64_t start = timer_ticks ();
 
 	ASSERT (intr_get_level () == INTR_ON);
-	while (timer_elapsed (start) < ticks)
-		thread_yield ();
+	// while (timer_elapsed (start) < ticks) //timer_elapsed는 인수로 받은 tick과 현재 tick과의 차이를 반환하는 함수가 된다.
+	// thread_yield ();
+	if (timer_elapsed (start) < ticks){ // [수정9] 반복 -> 조건 
+		thread_sleep(start+ticks); // thread를 blocked 상태로 만들고, sleep queue에 삽입하여 대기 , 깨어나야할 시간 인자로 
+	}
 }
 
 /* Suspends execution for approximately MS milliseconds. */
@@ -122,10 +124,16 @@ timer_print_stats (void) {
 }
 
 /* Timer interrupt handler. */
+
 static void
-timer_interrupt (struct intr_frame *args UNUSED) {
+timer_interrupt (struct intr_frame *args UNUSED) {	 // [수정11]
 	ticks++;
 	thread_tick ();
+
+	if (get_next_tick_to_awake() <= ticks){ /* 매 tick마다 sleep queue에서 깨어날 thread가 있는지 확인하여, 
+깨우는 함수를 호출하도록 한다. */
+		thread_awake(ticks);
+	}
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
