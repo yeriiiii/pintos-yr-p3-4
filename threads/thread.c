@@ -233,11 +233,8 @@ thread_create(const char *name, int priority,
 	thread_unblock (t);
 
 	/* [수정1] 생성된 스레드의 우선순위가 현재 실행중이 스레드의 우선순위 보다 높다면 CPU를 양보한다. */
-
 	if (thread_get_priority() < priority)
-	{
 		thread_yield();
-	}
        
 	return tid;
 }
@@ -425,8 +422,7 @@ int64_t get_next_tick_to_awake(void)
 /* Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
 /* Project 1 - Priority Scheduling [수정3] 
-현재 thread가 CPU를 양보하여 ready_list에 삽입 될 때 우선순위 순서로 정렬되어 삽입 되도록 수정
-*/
+현재 thread가 CPU를 양보하여 ready_list에 삽입 될 때 우선순위 순서로 정렬되어 삽입 되도록 수정*/
 void
 thread_yield (void) {
 	struct thread *curr = thread_current ();
@@ -446,8 +442,7 @@ thread_yield (void) {
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
 /* Project 1 - Priority Scheduling [수정4] 
-스레드의 우선순위가 변경되었을때 우선순위에 따라 선점이 발생하도록 한다.
-*/
+스레드의 우선순위가 변경되었을때 우선순위에 따라 선점이 발생하도록 한다.*/
 void
 thread_set_priority (int new_priority) {
 	struct thread *cur_thread = thread_current();
@@ -464,27 +459,28 @@ thread_get_priority (void) {
 	return thread_current ()->priority;
 }
 
-// [추가1]
+/* Project 1 - Priority Scheduling [추가1] 
+ready_list에서 Priority가 가장 높은 스레드와 현재 스레드의 Priority를 비교해서
+현재 스레드의 Priority가 더 낮으면, 높은 스레드에게 양보한다*/
 void test_max_priority(void)
 {
-	if (!list_empty(&ready_list))
+	if (!list_empty(&ready_list)) // ready_list 가 비어있지 않은지 확인
 	{	
 		struct thread* high_thread = list_entry(list_begin(&ready_list), struct thread, elem);
 		if (thread_get_priority() < high_thread->priority)
 			thread_yield();
 	}
-	// ready_list에서 우선순위가 가장 높은 스레드와 현재 스레드의 우선순위를 비교하여 스케줄링 한다. (ready_list 가 비여있지 않은지 확인)
+	// ready_list에서 우선순위가 가장 높은 스레드와 현재 스레드의 우선순위를 비교하여 스케줄링 한다. (ready_list 가 비어있지 않은지 확인)
 }
 
-// [추가2]
-// 첫 번째 인자의 우선순위가 높으면 1을 반환, 두 번째 인자의 우선순위가 높으면 0을 반환
+/* Project 1 - Priority Scheduling [추가2]
+a의 priority가 높으면 1을 반환, b의 priority가 높으면 0을 반환 */
 bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
 	struct thread *thread_a = list_entry(a, struct thread, elem);
 	struct thread *thread_b = list_entry(b, struct thread, elem);
 
 	return ((thread_a->priority) > (thread_b->priority));
-
 	// 인자로 주어진 스레드들의 우선순위를 비교
 }
 
