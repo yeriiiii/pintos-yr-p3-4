@@ -244,6 +244,7 @@ lock_held_by_current_thread (const struct lock *lock) {
 struct semaphore_elem {
 	struct list_elem elem;              /* List element. */
 	struct semaphore semaphore;         /* This semaphore. */
+	int priority;
 };
 
 /* Initializes condition variable COND.  A condition variable
@@ -279,12 +280,12 @@ cond_init (struct condition *cond) {
 void
 cond_wait (struct condition *cond, struct lock *lock) {
 	struct semaphore_elem waiter;
-
+	int priority;
 	ASSERT (cond != NULL);
 	ASSERT (lock != NULL);
 	ASSERT (!intr_context ());
 	ASSERT (lock_held_by_current_thread (lock));
-
+	waiter.priority = thread_current()->priority;
 	sema_init (&waiter.semaphore, 0);
 	list_insert_ordered(&cond->waiters, &waiter.elem, cmp_sem_priority, NULL);
 	// list_push_back (&cond->waiters, &waiter.elem);
@@ -332,10 +333,13 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 
 bool cmp_sem_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED){
 
-struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
-struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
+	struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
+	struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
 
+
+return ((sa->priority)>(sb->priority));
 
 /* 해당 condition variable 을 기다리는 세마포어 리스트를
 가장 높은 우선순위를 가지는 스레드의 우선순위 순으로 정렬하도록 구현 */
 }
+
