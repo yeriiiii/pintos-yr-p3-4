@@ -197,7 +197,10 @@ thread_print_stats (void) {
    The code provided sets the new thread's `priority' member to
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
-/* Project 1 - Priority Scheduling [수정1] */
+
+/* Project 1 - Priority Scheduling [수정1] 
+Thread의 ready_list 삽입시 현재 실행중인 thread와 우선순위를 비교하여, 새로 생성된 thread의 우선순위가 높다면 thread_yield()를 통해 CPU를 양보
+*/
 thread_create(const char *name, int priority,
 			  thread_func *function, void *aux)
 {
@@ -254,7 +257,9 @@ thread_block (void) {
    be important: if the caller had disabled interrupts itself,
    it may expect that it can atomically unblock a thread and
    update other data. */
-/* Project 1 - Priority Scheduling [수정2] */
+/* Project 1 - Priority Scheduling [수정2]
+Thread가 unblock 될때 우선순위 순으로 정렬 되어 ready_list에 삽입되도록 수정
+*/
 void
 thread_unblock (struct thread *t) {
 	enum intr_level old_level;
@@ -408,7 +413,9 @@ int64_t get_next_tick_to_awake(void)
 
 /* Yields the CPU.  The current thread is not put to sleep and
    may be scheduled again immediately at the scheduler's whim. */
-/* Project 1 - Priority Scheduling [수정3] */
+/* Project 1 - Priority Scheduling [수정3] 
+현재 thread가 CPU를 양보하여 ready_list에 삽입 될 때 우선순위 순서로 정렬되어 삽입 되도록 수정
+*/
 void
 thread_yield (void) {
 	struct thread *curr = thread_current ();
@@ -424,7 +431,9 @@ thread_yield (void) {
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
-/* Project 1 - Priority Scheduling [수정4] */
+/* Project 1 - Priority Scheduling [수정4] 
+스레드의 우선순위가 변경되었을때 우선순위에 따라 선점이 발생하도록 한다.
+*/
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
@@ -435,6 +444,17 @@ int
 thread_get_priority (void) {
 	return thread_current ()->priority;
 }
+
+// [추가1]
+void test_max_priority(void) {
+	//ready_list에서 우선순위가 가장 높은 스레드와 현재 스레드의 우선순위를 비교하여 스케줄링 한다. (ready_list 가 비여있지 않은지 확인)
+}
+
+bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED){
+	 // 인자로 주어진 스레드들의 우선순위를 비교 
+}
+
+
 
 /* Sets the current thread's nice value to NICE. */
 void
