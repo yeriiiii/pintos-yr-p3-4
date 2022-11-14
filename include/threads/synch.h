@@ -37,6 +37,8 @@ void cond_init (struct condition *); // condition variable 자료구조를 초�
 void cond_wait (struct condition *, struct lock *); // condition variable을 통해 signal이 오는지 기림
 void cond_signal (struct condition *, struct lock *); // condition variable 에서 기다리는 가장 높은 우선순위의 스레드에 signal을 보냄
 void cond_broadcast (struct condition *, struct lock *); // condition variable에서 기다리는 모든 스레드에 signal을 보냄
+// [sema]
+bool cmp_sem_priority (const struct list_elem *a, const struct list_elem *b, void *aux);
 
 /* Optimization barrier.
  *
