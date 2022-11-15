@@ -451,7 +451,7 @@ thread_set_priority (int new_priority) {
 	refresh_priority();
 	donate_priority();
 	test_max_priority(); // ready_list가 비어있지 않다면 우선순위가 제일 높은 스레드랑 현재 스레드를 비교해서 높은 순위의 스레드에게 양보
-// donaiton 수정
+// donaiton 수정 확인
 	
 	/* donation 을 고려하여 thread_set_priority() 함수를 수정한다 */
 	/* refresh_priority() 함수를 사용하여 우선순위를 변경으로 인한
