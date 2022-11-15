@@ -193,8 +193,9 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!lock_held_by_current_thread (lock));
 	struct thread *cur_thread = thread_current();
 	if (lock->holder != NULL){
-		cur_thread->wait_on_lock = &lock; 
-		lock->holder->init_priority = lock->holder->priority; 
+		cur_thread->wait_on_lock = lock; 
+		cur_thread->init_priority = cur_thread->priority;
+		// lock->holder->init_priority = lock->holder->priority; 
 		list_push_back(&lock->holder->donations, &cur_thread->donation_elem);
 		donate_priority();
 	}
@@ -247,7 +248,7 @@ lock_release (struct lock *lock) {
 	/* remove_with_lock() 함수 추가 */
 	/* refresh_priority() 함수 추가 */
 	//if (!list_empty(&lock->holder->donations)) //맞음?
-	remove_with_lock(&lock);
+	remove_with_lock(lock);
 	refresh_priority();
 	sema_up (&lock->semaphore);
 }
