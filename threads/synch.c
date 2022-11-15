@@ -194,14 +194,13 @@ lock_acquire (struct lock *lock) {
 	struct thread *cur_thread = thread_current();
 	if (lock->holder != NULL){
 		cur_thread->wait_on_lock = lock; 
-		cur_thread->init_priority = cur_thread->priority;
+		// cur_thread->init_priority = cur_thread->priority;
 		list_insert_ordered(&lock->holder->donations, &cur_thread->donation_elem, cmp_donate_priority, NULL);
 		donate_priority();
 	}
 	/* 해당 lock 의 holder가 존재 한다면 아래 작업을 수행한다. */
 	/* 현재 스레드의 wait_on_lock 변수에 획득 하기를 기다리는 lock의 주소를 저장 */
-	/* multiple donation 을 고려하기 위해 이전상태의 우선순위를 기억,
-	donation 을 받은 스레드의 thread 구조체를 list로 관리한다. */
+	/* multiple donation 상황에서 이전상태의 우선순위를 기억하기 위해 donation 을 받은 스레드의 thread 구조체를 list로 관리한다. */
 	/* priority donation 수행하기 위해 donate_priority() 함수 호출 */
 	sema_down (&lock->semaphore);
 	cur_thread->wait_on_lock = NULL;
@@ -296,7 +295,7 @@ cond_init (struct condition *cond) {
    interrupt handler.  This function may be called with
    interrupts disabled, but interrupts will be turned back on if
    we need to sleep. */
-/* Project 1 - Priority Scheduling : Sync [수정1] */
+/* Project 1 - Priority Scheduling (수정) */
 void
 cond_wait (struct condition *cond, struct lock *lock) {
 	struct semaphore_elem waiter;
@@ -322,7 +321,7 @@ cond_wait (struct condition *cond, struct lock *lock) {
    An interrupt handler cannot acquire a lock, so it does not
    make sense to try to signal a condition variable within an
    interrupt handler. */
-/* Project 1 - Priority Scheduling : Sync [수정2] */
+/* Project 1 - Priority Scheduling (수정) */
 void
 cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 	ASSERT (cond != NULL);
@@ -331,7 +330,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 	ASSERT (lock_held_by_current_thread (lock));
 
 	if (!list_empty (&cond->waiters)){
-		list_sort(&cond->waiters, cmp_sem_priority, NULL); // [수정2] Priority 순으로 condvar list 정렬하기 
+		list_sort(&cond->waiters, cmp_sem_priority, NULL); // Priority 순으로 condvar list 정렬하기 
 		sema_up (&list_entry (list_pop_front (&cond->waiters),
 					struct semaphore_elem, elem)->semaphore);
 	}
@@ -353,18 +352,19 @@ cond_broadcast (struct condition *cond, struct lock *lock) {
 		cond_signal (cond, lock);
 }
 
-/* Project 1 - Priority Scheduling : Sync [추가] 
-list_insert_ordered에 Priority 순으로 삽입하기 위해 Priority 비교하기*/
+/* Project 1 - Priority Scheduling
+condition variable 을 기다리는 세마포어 리스트를
+가장 높은 우선순위를 가지는 스레드의 우선순위 순으로 정렬하기 위한 비교 함수*/
 bool cmp_sem_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED){
 
 	struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
 	struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
 
 	return ((sa->priority)>(sb->priority));
-/* 해당 condition variable 을 기다리는 세마포어 리스트를
-가장 높은 우선순위를 가지는 스레드의 우선순위 순으로 정렬하도록 구현 */
 }
 
+/* Project 1 - Priority Scheduling
+donation list를 가장 높은 우선순위를 가지는 스레드의 우선순위 순으로 정렬하기 위한 비교 함수*/
 bool cmp_donate_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) 
 {
 	struct thread *thread_a = list_entry(a, struct thread, donation_elem);
