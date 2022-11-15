@@ -90,12 +90,12 @@ struct thread {
 	tid_t tid;                          /* Thread identifier. */
 	enum thread_status status;          /* Thread state. */
 	char name[16];                      /* Name (for debugging purposes). */
+	int init_priority; // donation 이후 우선순위를 초기화하기 위해 초기값 저장
 	int priority;                       /* Priority. */
 	int64_t wakeup_tick; 					// [수정1] 깨어나야할 tick
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 	// priority donation [추가]
-	int init_priority; // donation 이후 우선순위를 초기화하기 위해 초기값 저장
 	struct lock *wait_on_lock; // 해당 스레드가 대기 하고 있는 lock자료구조의 주소를 저장
 	struct list donations; // multiple donation 을 고려하기 위해 사용
 	struct list_elem donation_elem; // multiple donation을 고려하기 위해 사용
