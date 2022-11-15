@@ -191,9 +191,25 @@ lock_acquire (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
+	struct thread *cur_thread = thread_current();
+	if (lock->holder != NULL){
+		cur_thread->wait_on_lock = &lock; 
+		lock->holder->init_priority = lock->holder->priority; 
+		list_push_back(&lock->holder->donations, &cur_thread->donation_elem);
+		donate_priority();
+	}
+	/* 해당 lock 의 holder가 존재 한다면 아래 작업을 수행한다. */
+	/* 현재 스레드의 wait_on_lock 변수에 획득 하기를 기다리는 lock의 주소를 저장 */
+	/* multiple donation 을 고려하기 위해 이전상태의 우선순위를 기억,
+	donation 을 받은 스레드의 thread 구조체를 list로 관리한다. */
+	/* priority donation 수행하기 위해 donate_priority() 함수 호출 */
 
 	sema_down (&lock->semaphore);
-	lock->holder = thread_current ();
+	cur_thread->wait_on_lock = NULL;
+
+	/* lock을 획득 한 후 lock holder 를 갱신한다. */
+	lock->holder = cur_thread;
+
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -227,6 +243,12 @@ lock_release (struct lock *lock) {
 	ASSERT (lock_held_by_current_thread (lock));
 
 	lock->holder = NULL;
+	// donation 추가
+	/* remove_with_lock() 함수 추가 */
+	/* refresh_priority() 함수 추가 */
+	//if (!list_empty(&lock->holder->donations)) //맞음?
+	remove_with_lock(&lock);
+	refresh_priority();
 	sema_up (&lock->semaphore);
 }
 
@@ -346,4 +368,6 @@ bool cmp_sem_priority (const struct list_elem *a, const struct list_elem *b, voi
 /* 해당 condition variable 을 기다리는 세마포어 리스트를
 가장 높은 우선순위를 가지는 스레드의 우선순위 순으로 정렬하도록 구현 */
 }
+
+
 
