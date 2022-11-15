@@ -448,9 +448,16 @@ thread_set_priority (int new_priority) {
 	struct thread *cur_thread = thread_current();
 	cur_thread->priority = new_priority;
 	/* [수정4] 스레드의 우선순위가 변경되었을때 우선순위에 따라 선점이 발생하도록 한다. */
-	test_max_priority();
-	// list_remove(&cur_thread->elem);
-	// list_insert_ordered(&ready_list, &cur_thread->elem, &cmp_priority, NULL);
+	refresh_priority();
+	donate_priority();
+	test_max_priority(); // ready_list가 비어있지 않다면 우선순위가 제일 높은 스레드랑 현재 스레드를 비교해서 높은 순위의 스레드에게 양보
+// donaiton 수정 확인!
+	
+	/* donation 을 고려하여 thread_set_priority() 함수를 수정한다 */
+	/* refresh_priority() 함수를 사용하여 우선순위를 변경으로 인한
+	donation 관련 정보를 갱신한다. 
+	donation_priority(), test_max_pariority() 함수를 적절히
+	사용하여 priority donation 을 수행하고 스케줄링 한다. */
 }
 
 /* Returns the current thread's priority. */
@@ -574,6 +581,12 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+	// donation 추가 (donation 자료구조 초기화)
+	t->init_priority = priority; 
+	t->wait_on_lock = NULL; 
+	list_init(&t->donations);
+	t->donation_elem; 
+	
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
@@ -752,4 +765,57 @@ allocate_tid (void) {
 	lock_release (&tid_lock);
 
 	return tid;
+}
+
+void donate_priority(void)
+{
+	struct thread *cur_thread = thread_current();
+	// struct thread *next_thread ;
+	int donate_p = cur_thread->priority;
+	int nested_depth;
+	for (nested_depth = 0; nested_depth < 8; nested_depth++){
+		if(cur_thread->wait_on_lock == NULL){
+			break;
+		}
+		else{
+			cur_thread = cur_thread->wait_on_lock->holder;
+			cur_thread->priority = donate_p;
+		}
+	}  
+/* priority donation 을 수행하는 함수를 구현한다.
+현재 스레드가 기다리고 있는 lock 과 연결 된 모든 스레드들을 순회하며
+현재 스레드의 우선순위를 lock 을 보유하고 있는 스레드에게 기부 한다.
+(Nested donation 그림 참고, nested depth 는 8로 제한한다. ) */
+}
+
+// donation(multiple만 해당)
+void remove_with_lock(struct lock *lock)
+{	
+	// list_remove(&lock->holder->donation_elem);
+	list_pop_back(&lock->holder->donations);
+	/* lock 을 해지 했을때 donations 리스트에서 해당 엔트리를
+	삭제 하기 위한 함수를 구현한다. */
+	/* 현재 스레드의 donations 리스트를 확인하여 해지 할 lock 을
+	보유하고 있는 엔트리를 삭제 한다. */
+}
+
+void refresh_priority(void)
+{	
+	struct thread *cur_thread = thread_current(); 
+	if (cur_thread->priority != cur_thread->init_priority){
+		cur_thread->priority = cur_thread->init_priority;
+
+		struct thread *end_thread = list_entry(list_end(&cur_thread->donations), struct thread, donation_elem);
+		
+		if ((cur_thread->priority) < (end_thread->priority)){
+			(cur_thread->priority) = (end_thread->priority);
+		}
+	}
+	// release(1. remove 2. refresh 3. sema_up)
+	/* 스레드의 우선순위가 변경 되었을때 donation 을 고려하여
+	우선순위를 다시 결정 하는 함수를 작성 한다. */
+	/* 현재 스레드의 우선순위를 기부받기 전의 우선순위로 변경 */
+	/* 가장 우선수위가 높은 donations 리스트의 스레드와
+	현재 스레드의 우선순위를 비교하여 높은 값을 현재 스레드의
+	우선순위로 설정한다. */
 }
