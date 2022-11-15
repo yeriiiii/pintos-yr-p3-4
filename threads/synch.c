@@ -195,14 +195,7 @@ lock_acquire (struct lock *lock) {
 	if (lock->holder != NULL){
 		cur_thread->wait_on_lock = lock; 
 		cur_thread->init_priority = cur_thread->priority;
-		// lock->holder->init_priority = lock->holder->priority; 
-		if (!list_empty(&cur_thread->donations)){
-			list_insert_ordered(&cur_thread->donations, &cur_thread->donation_elem, cmp_donate_priority, NULL);
-		}
-		else
-		{
-			list_push_back(&lock->holder->donations, &cur_thread->donation_elem);
-		}
+		list_insert_ordered(&lock->holder->donations, &cur_thread->donation_elem, cmp_donate_priority, NULL);
 		donate_priority();
 	}
 	/* 해당 lock 의 holder가 존재 한다면 아래 작업을 수행한다. */
@@ -210,13 +203,10 @@ lock_acquire (struct lock *lock) {
 	/* multiple donation 을 고려하기 위해 이전상태의 우선순위를 기억,
 	donation 을 받은 스레드의 thread 구조체를 list로 관리한다. */
 	/* priority donation 수행하기 위해 donate_priority() 함수 호출 */
-
 	sema_down (&lock->semaphore);
 	cur_thread->wait_on_lock = NULL;
-
 	/* lock을 획득 한 후 lock holder 를 갱신한다. */
 	lock->holder = cur_thread;
-
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -248,14 +238,13 @@ void
 lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
-
-	lock->holder = NULL;
 	// donation 추가
 	/* remove_with_lock() 함수 추가 */
 	/* refresh_priority() 함수 추가 */
-	//if (!list_empty(&lock->holder->donations)) //맞음?
+	lock->holder = NULL;
 	remove_with_lock(lock);
 	refresh_priority();
+
 	sema_up (&lock->semaphore);
 }
 
