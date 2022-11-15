@@ -39,6 +39,8 @@ void cond_signal (struct condition *, struct lock *); // condition variable 에�
 void cond_broadcast (struct condition *, struct lock *); // condition variable에서 기다리는 모든 스레드에 signal을 보냄
 // [sema]
 bool cmp_sem_priority (const struct list_elem *a, const struct list_elem *b, void *aux);
+bool cmp_donate_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
+
 
 /* Optimization barrier.
  *

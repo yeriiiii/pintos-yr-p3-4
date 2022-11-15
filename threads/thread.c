@@ -790,15 +790,19 @@ void donate_priority(void)
 // donation(multiple만 해당)
 void remove_with_lock(struct lock *lock)
 {	
-	struct list *d_list = &lock->holder->donations;
+	struct thread *cur_thread = thread_current();
+	struct list *d_list = &cur_thread->donations;
 	struct list_elem *de;
+
 	// list_remove(&lock->holder->donation_elem);
 	if (d_list->head.next != NULL){
-		for ((de=list_begin(d_list)); de!= list_end(d_list); de=list_next(de)){
-			if (list_entry(de, struct thread, donation_elem)->wait_on_lock == lock )
+		for ((de=list_begin(d_list)); de!= list_tail(d_list); de=list_next(de)){
+			if (list_entry(de, struct thread, donation_elem)->wait_on_lock == lock)
 				list_remove(de);
 		}
 	}
+
+
 	/* lock 을 해지 했을때 donations 리스트에서 해당 엔트리를
 	삭제 하기 위한 함수를 구현한다. */
 	/* 현재 스레드의 donations 리스트를 확인하여 해지 할 lock 을
@@ -811,10 +815,10 @@ void refresh_priority(void)
 	if (cur_thread->priority != cur_thread->init_priority){
 		cur_thread->priority = cur_thread->init_priority;
 
-		struct thread *end_thread = list_entry(list_end(&cur_thread->donations), struct thread, donation_elem);
+		struct thread *begin_thread = list_entry(list_begin(&cur_thread->donations), struct thread, donation_elem);
 		
-		if ((cur_thread->priority) < (end_thread->priority)){
-			(cur_thread->priority) = (end_thread->priority);
+		if ((cur_thread->priority) < (begin_thread->priority)){
+			(cur_thread->priority) = (begin_thread->priority);
 		}
 	}
 	// release(1. remove 2. refresh 3. sema_up)

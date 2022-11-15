@@ -196,7 +196,13 @@ lock_acquire (struct lock *lock) {
 		cur_thread->wait_on_lock = lock; 
 		cur_thread->init_priority = cur_thread->priority;
 		// lock->holder->init_priority = lock->holder->priority; 
-		list_push_back(&lock->holder->donations, &cur_thread->donation_elem);
+		if (!list_empty(&cur_thread->donations)){
+			list_insert_ordered(&cur_thread->donations, &cur_thread->donation_elem, cmp_donate_priority, NULL);
+		}
+		else
+		{
+			list_push_back(&lock->holder->donations, &cur_thread->donation_elem);
+		}
 		donate_priority();
 	}
 	/* 해당 lock 의 holder가 존재 한다면 아래 작업을 수행한다. */
@@ -370,5 +376,12 @@ bool cmp_sem_priority (const struct list_elem *a, const struct list_elem *b, voi
 가장 높은 우선순위를 가지는 스레드의 우선순위 순으로 정렬하도록 구현 */
 }
 
+bool cmp_donate_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) 
+{
+	struct thread *thread_a = list_entry(a, struct thread, donation_elem);
+	struct thread *thread_b = list_entry(b, struct thread, donation_elem);
+
+	return ((thread_a->priority) > (thread_b->priority));
+}
 
 
