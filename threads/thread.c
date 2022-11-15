@@ -446,7 +446,7 @@ thread_yield (void) {
 void
 thread_set_priority (int new_priority) {
 	struct thread *cur_thread = thread_current();
-	cur_thread->priority = new_priority;
+	cur_thread->init_priority = new_priority;
 	/* [수정4] 스레드의 우선순위가 변경되었을때 우선순위에 따라 선점이 발생하도록 한다. */
 	refresh_priority();
 	// donate_priority();
@@ -790,12 +790,13 @@ void donate_priority(void)
 // donation(multiple만 해당)
 void remove_with_lock(struct lock *lock)
 {	
-	struct list_elem *de = list_head(&lock->holder->donations);
-
+	struct list *d_list = &lock->holder->donations;
+	struct list_elem *de;
 	// list_remove(&lock->holder->donation_elem);
-	while ((de=list_next(de))!= list_end(&lock->holder->donations)){
-		if (list_entry(de, struct thread, donation_elem)->wait_on_lock == lock ){
-			list_remove(de);
+	if (d_list->head.next != NULL){
+		for ((de=list_begin(d_list)); de!= list_end(d_list); de=list_next(de)){
+			if (list_entry(de, struct thread, donation_elem)->wait_on_lock == lock )
+				list_remove(de);
 		}
 	}
 	/* lock 을 해지 했을때 donations 리스트에서 해당 엔트리를
