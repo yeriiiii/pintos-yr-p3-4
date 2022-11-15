@@ -449,9 +449,8 @@ thread_set_priority (int new_priority) {
 	cur_thread->priority = new_priority;
 	/* [수정4] 스레드의 우선순위가 변경되었을때 우선순위에 따라 선점이 발생하도록 한다. */
 	refresh_priority();
-	donate_priority();
+	// donate_priority();
 	test_max_priority(); // ready_list가 비어있지 않다면 우선순위가 제일 높은 스레드랑 현재 스레드를 비교해서 높은 순위의 스레드에게 양보
-// donaiton 수정 확인!
 	
 	/* donation 을 고려하여 thread_set_priority() 함수를 수정한다 */
 	/* refresh_priority() 함수를 사용하여 우선순위를 변경으로 인한
@@ -791,8 +790,14 @@ void donate_priority(void)
 // donation(multiple만 해당)
 void remove_with_lock(struct lock *lock)
 {	
+	struct list_elem *de = list_head(&lock->holder->donations);
+
 	// list_remove(&lock->holder->donation_elem);
-	list_pop_back(&lock->holder->donations);
+	while ((de=list_next(de))!= list_end(&lock->holder->donations)){
+		if (list_entry(de, struct thread, donation_elem)->wait_on_lock == lock ){
+			list_remove(de);
+		}
+	}
 	/* lock 을 해지 했을때 donations 리스트에서 해당 엔트리를
 	삭제 하기 위한 함수를 구현한다. */
 	/* 현재 스레드의 donations 리스트를 확인하여 해지 할 lock 을
