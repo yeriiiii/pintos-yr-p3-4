@@ -808,7 +808,7 @@ void mlfqs_priority (struct thread *t)
 	int recent_cpu = t->recent_cpu;
 	int nice = t->nice;
 	if (t!=idle_thread){
-		t->priority = sub_mixed((sub_fp(int_to_fp(PRI_MAX), div_mixed(recent_cpu,4))),(nice * 2));
+		t->priority = fp_to_int(sub_mixed((sub_fp(int_to_fp(PRI_MAX), div_mixed(recent_cpu,4))),(nice * 2)));
 		//priority = PRI_MAX – (recent_cpu / 4) – (nice * 2)
 	}
 /* 해당지 스레드가 idle_thread 가 아닌 검사 */
@@ -847,7 +847,7 @@ void mlfqs_increment (void)
 {
 	struct thread *cur_thread = thread_current();
 	if (cur_thread!=idle_thread){
-		cur_thread->recent_cpu += 1;
+		cur_thread->recent_cpu += F;
 	}
 	/* 해당 스레드가 idle_thread 가 아닌지 검사 */
 	/* 현재 스레드의 recent_cpu 값을 1증가 시킨다. */
@@ -858,14 +858,20 @@ void mlfqs_recalc (void)
 {
 	struct list_elem *e;
 
-	if (!list_empty(&all_list)){
-		e = list_begin(&all_list);
-		while(e != list_tail(&all_list)){
-			struct thread* circle_thread = list_entry(e, struct thread, all_elem);
-			mlfqs_recent_cpu(circle_thread);
-			mlfqs_priority(circle_thread);
-			e = list_next(e);
-		}
+	// if (!list_empty(&all_list)){
+	// 	e = list_begin(&all_list);
+	// 	while(e != list_tail(&all_list)){
+	// 		struct thread* circle_thread = list_entry(e, struct thread, all_elem);
+	// 		mlfqs_recent_cpu(circle_thread);
+	// 		mlfqs_priority(circle_thread);
+	// 		e = list_next(e);
+	// 	}
+	// }
+
+	for(e = list_begin(&all_list); e !=list_end(&all_list); e=list_next(e)){
+		struct thread* circle_thread = list_entry(e, struct thread, all_elem);
+		mlfqs_recent_cpu(circle_thread);
+		mlfqs_priority(circle_thread);
 	}
 	/* 모든 thread의 recent_cpu와 priority값 재계산 한다. */
 }
@@ -905,7 +911,7 @@ int thread_get_nice (void)
 int thread_get_load_avg (void)
 {
 	enum intr_level old_level = intr_disable();
-	int cur_load_avg = mult_mixed(load_avg, 100);
+	int cur_load_avg = fp_to_int_round(mult_mixed(load_avg, 100));
 	intr_set_level(old_level);
 	return cur_load_avg;
 /* load_avg에 100을 곱해서 반환 한다.
@@ -916,7 +922,7 @@ int thread_get_recent_cpu (void)
 {
 	enum intr_level old_level = intr_disable();
 	struct thread *cur_thread = thread_current();
-	int cur_recent_cpu = mult_mixed(cur_thread->recent_cpu, 100);
+	int cur_recent_cpu = fp_to_int_round(mult_mixed(cur_thread->recent_cpu, 100));
 	intr_set_level(old_level);
 	return cur_recent_cpu;
 /* recent_cpu 에 100을 곱해서 반환 한다.
