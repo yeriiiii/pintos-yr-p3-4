@@ -139,6 +139,7 @@ void thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
+	list_init(&all_list);
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread (); 
@@ -149,7 +150,7 @@ void thread_init (void) {
 	/* Project 1 - Alarm Clock */
 	list_init(&sleep_list); 
 	next_tick_to_awake = INT64_MAX;
-	list_init(&all_list);
+	
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -246,7 +247,7 @@ thread_create(const char *name, int priority,
 	t->tf.eflags = FLAG_IF;
 
 	/* Add to run queue. */
-	list_push_back(&all_list, &t->all_elem);
+	// list_push_back(&all_list, &t->all_elem);
 	thread_unblock (t);
 
 	/* [수정1] 생성된 스레드의 우선순위가 현재 실행중이 스레드의 우선순위 보다 높다면 CPU를 양보한다. */
@@ -554,10 +555,11 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->init_priority = priority;
 	t->wait_on_lock = NULL; 
 	list_init(&t->donations);
+	
 	// mlfqs 추가
 	t->nice = NICE_DEFAULT;
 	t->recent_cpu = RECENT_CPU_DEFAULT;
-	
+	list_push_back(&all_list, &t->all_elem);
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
