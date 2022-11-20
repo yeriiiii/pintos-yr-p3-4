@@ -141,14 +141,16 @@ void thread_init (void) {
 	list_init (&destruction_req);
 	list_init(&all_list);
 
+	/* Project 1 - Alarm Clock */
+	list_init(&sleep_list);
+	list_init(&all_list);
+
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread (); 
 	init_thread (initial_thread, "main", PRI_DEFAULT);
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid ();
 
-	/* Project 1 - Alarm Clock */
-	list_init(&sleep_list); 
 	next_tick_to_awake = INT64_MAX;
 	
 }
@@ -247,13 +249,13 @@ thread_create(const char *name, int priority,
 	t->tf.eflags = FLAG_IF;
 
 	/* Add to run queue. */
-	// list_push_back(&all_list, &t->all_elem);
 	thread_unblock (t);
 
 	/* [수정1] 생성된 스레드의 우선순위가 현재 실행중이 스레드의 우선순위 보다 높다면 CPU를 양보한다. */
-	if (thread_get_priority() < priority)
-		thread_yield();
-       
+	test_max_priority();
+	// if (thread_get_priority() < priority)
+	// 	thread_yield();
+
 	return tid;
 }
 
@@ -490,6 +492,7 @@ bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *au
 /* Idle thread.  Executes when no other thread is ready to run.
 
    The idle thread is initially put on the ready list by
+
    thread_start().  It will be scheduled once initially, at which
    point it initializes idle_thread, "up"s the semaphore passed
    to it to enable thread_start() to continue, and immediately
@@ -820,11 +823,12 @@ void mlfqs_priority (struct thread *t)
 //mlfqs 추가
 void mlfqs_recent_cpu (struct thread *t)
 {
+	
 	int recent_cpu = t->recent_cpu;
 	int nice = t->nice;
 	if (t!=idle_thread){
 		t->recent_cpu = add_mixed(mult_fp(div_fp(mult_mixed(load_avg, 2),add_mixed(mult_mixed(load_avg,2), 1)), recent_cpu), nice);
-		//recent_cpu = (2 * load_avg) / (2 * load_avg + 1) * recent_cpu + nice
+		// recent_cpu = (2 * load_avg) / (2 * load_avg + 1) * recent_cpu + nice
 	}
 	/* 해당 스레드가 idle_thread 가 아닌지 검사 */
 	/*recent_cpu계산식을 구현 (fixed_point.h의 계산함수 이용)*/
@@ -847,6 +851,7 @@ void mlfqs_load_avg (void){
 
 void mlfqs_increment (void)
 {
+	
 	struct thread *cur_thread = thread_current();
 	if (cur_thread!=idle_thread){
 		cur_thread->recent_cpu += F;
