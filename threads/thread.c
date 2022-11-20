@@ -139,6 +139,7 @@ void thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
+	list_init(&all_list);
 
 	/* Project 1 - Alarm Clock */
 	list_init(&sleep_list);
@@ -557,10 +558,10 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->init_priority = priority;
 	t->wait_on_lock = NULL; 
 	list_init(&t->donations);
+	
 	// mlfqs 추가
 	t->nice = NICE_DEFAULT;
 	t->recent_cpu = RECENT_CPU_DEFAULT;
-	
 	list_push_back(&all_list, &t->all_elem);
 }
 
@@ -812,9 +813,8 @@ void mlfqs_priority (struct thread *t)
 	int recent_cpu = t->recent_cpu;
 	int nice = t->nice;
 	if (t!=idle_thread){
-		// t->priority = fp_to_int_round(add_mixed(div_mixed(recent_cpu, -4), PRI_MAX - nice * 2));
-		t->priority = fp_to_int(add_mixed((add_fp(int_to_fp(PRI_MAX), div_mixed(recent_cpu,-4))),(nice * (-2))));
-		// priority = PRI_MAX – (recent_cpu / 4) – (nice * 2)
+		t->priority = fp_to_int(sub_mixed((sub_fp(int_to_fp(PRI_MAX), div_mixed(recent_cpu,4))),(nice * 2)));
+		//priority = PRI_MAX – (recent_cpu / 4) – (nice * 2)
 	}
 /* 해당지 스레드가 idle_thread 가 아닌 검사 */
 /*priority계산식을 구현 (fixed_point.h의 계산함수 이용)*/
@@ -854,8 +854,7 @@ void mlfqs_increment (void)
 	
 	struct thread *cur_thread = thread_current();
 	if (cur_thread!=idle_thread){
-		int recent_cpu = cur_thread->recent_cpu;
-		cur_thread->recent_cpu = add_mixed(recent_cpu, 1);
+		cur_thread->recent_cpu += F;
 	}
 	/* 해당 스레드가 idle_thread 가 아닌지 검사 */
 	/* 현재 스레드의 recent_cpu 값을 1증가 시킨다. */
@@ -866,14 +865,20 @@ void mlfqs_recalc (void)
 {
 	struct list_elem *e;
 
-	if (!list_empty(&all_list)){
-		e = list_begin(&all_list);
-		while(e != list_tail(&all_list)){
-			struct thread* circle_thread = list_entry(e, struct thread, all_elem);
-			mlfqs_recent_cpu(circle_thread);
-			mlfqs_priority(circle_thread);
-			e = list_next(e);
-		}
+	// if (!list_empty(&all_list)){
+	// 	e = list_begin(&all_list);
+	// 	while(e != list_tail(&all_list)){
+	// 		struct thread* circle_thread = list_entry(e, struct thread, all_elem);
+	// 		mlfqs_recent_cpu(circle_thread);
+	// 		mlfqs_priority(circle_thread);
+	// 		e = list_next(e);
+	// 	}
+	// }
+
+	for(e = list_begin(&all_list); e !=list_end(&all_list); e=list_next(e)){
+		struct thread* circle_thread = list_entry(e, struct thread, all_elem);
+		mlfqs_recent_cpu(circle_thread);
+		mlfqs_priority(circle_thread);
 	}
 	/* 모든 thread의 recent_cpu와 priority값 재계산 한다. */
 }

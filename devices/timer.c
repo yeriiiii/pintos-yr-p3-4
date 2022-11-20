@@ -6,6 +6,7 @@
 #include "threads/interrupt.h"
 #include "threads/io.h"
 #include "threads/synch.h"
+#include "threads/thread.h"
 
 
 /* See [8254] for hardware details of the 8254 timer chip. */
@@ -126,8 +127,6 @@ timer_print_stats (void) {
 
 /* Timer interrupt handler. */
 
-extern bool thread_mlfqs;
-
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {	 // [수정11]
 	ticks++;
@@ -136,13 +135,21 @@ timer_interrupt (struct intr_frame *args UNUSED) {	 // [수정11]
 	if (thread_mlfqs){
 		struct thread *cur_thread = thread_current();
 		mlfqs_increment();
-		if(ticks % 100 == 0) {
-			mlfqs_load_avg();
-			mlfqs_recalc();
-		}
-		else if(ticks % 4 == 0) {
+		if(ticks % 4 == 0) {
 			mlfqs_priority(cur_thread);
+			if(ticks % 100 == 0) {
+				mlfqs_load_avg();
+				mlfqs_recalc();
+			}
 		}
+		// original
+		// if(ticks % 100 == 0) {
+		// 	mlfqs_load_avg();
+		// 	mlfqs_recalc();
+		// }
+		// else if(ticks % 4 == 0) {
+		// 	mlfqs_priority(cur_thread);
+		// }
 	}
 
 	if (get_next_tick_to_awake() <= ticks){ /* 매 tick마다 sleep queue에서 깨어날 thread가 있는지 확인하여, 
