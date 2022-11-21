@@ -44,3 +44,11 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	printf ("system call!\n");
 	thread_exit ();
 }
+
+void check_address(void *addr) {
+	if(!is_user_vaddr(addr)){
+		exit(1);
+	}
+/* 포인터가 가리키는 주소가 유저영역의 주소인지 확인 */
+/* 잘못된 접근일 경우 프로세스 종료 */
+}
