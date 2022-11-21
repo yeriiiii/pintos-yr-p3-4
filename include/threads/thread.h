@@ -99,7 +99,10 @@ struct thread {
 	struct lock *wait_on_lock; // 해당 스레드가 대기 하고 있는 lock자료구조의 주소를 저장
 	struct list donations; // multiple donation 을 고려하기 위해 사용
 	struct list_elem donation_elem; // multiple donation을 고려하기 위해 사용
-
+	// mlfqs 추가
+	int nice;
+	int recent_cpu;
+	struct list_elem all_elem;
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
@@ -162,6 +165,13 @@ bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *au
 void donate_priority(void);
 void remove_with_lock(struct lock *lock);
 void refresh_priority(void);
+
+// mlfqs 추가
+void mlfqs_priority (struct thread *t);
+void mlfqs_recent_cpu (struct thread *t);
+void mlfqs_load_avg (void);
+void mlfqs_increment (void);
+void mlfqs_recalc (void);
 
 #endif /* threads/thread.h */
 

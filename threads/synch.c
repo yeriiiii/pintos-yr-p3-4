@@ -192,11 +192,13 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 	struct thread *cur_thread = thread_current();
-	if (lock->holder != NULL){
-		cur_thread->wait_on_lock = lock; 
-		// cur_thread->init_priority = cur_thread->priority;
-		list_insert_ordered(&lock->holder->donations, &cur_thread->donation_elem, cmp_donate_priority, NULL);
-		donate_priority();
+	if (!thread_mlfqs) {
+		if (lock->holder != NULL){
+			cur_thread->wait_on_lock = lock; 
+			// cur_thread->init_priority = cur_thread->priority;
+			list_insert_ordered(&lock->holder->donations, &cur_thread->donation_elem, cmp_donate_priority, NULL);
+			donate_priority();
+		}
 	}
 	/* 해당 lock 의 holder가 존재 한다면 아래 작업을 수행한다. */
 	/* 현재 스레드의 wait_on_lock 변수에 획득 하기를 기다리는 lock의 주소를 저장 */
@@ -206,6 +208,9 @@ lock_acquire (struct lock *lock) {
 	cur_thread->wait_on_lock = NULL;
 	/* lock을 획득 한 후 lock holder 를 갱신한다. */
 	lock->holder = cur_thread;
+
+	//mlfqs추가
+	/* mlfqs 스케줄러 활성화시 priority donation 관련 코드 비활성화 */
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -240,11 +245,18 @@ lock_release (struct lock *lock) {
 	// donation 추가
 	/* remove_with_lock() 함수 추가 */
 	/* refresh_priority() 함수 추가 */
+
 	lock->holder = NULL;
-	remove_with_lock(lock);
-	refresh_priority();
+	
+	if (!thread_mlfqs) {
+		remove_with_lock(lock);
+		refresh_priority();
+	}
 
 	sema_up (&lock->semaphore);
+
+	//mlfqs 추가
+	/* mlfqs 스케줄러 활성화시 priority donation 관련 코드 비활성화 */
 }
 
 /* Returns true if the current thread holds LOCK, false
