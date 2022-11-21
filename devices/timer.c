@@ -6,6 +6,8 @@
 #include "threads/interrupt.h"
 #include "threads/io.h"
 #include "threads/synch.h"
+#include "threads/thread.h"
+
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -130,10 +132,36 @@ timer_interrupt (struct intr_frame *args UNUSED) {	 // [수정11]
 	ticks++;
 	thread_tick ();
 
+	if (thread_mlfqs){
+		struct thread *cur_thread = thread_current();
+		mlfqs_increment();
+		if(ticks % 4 == 0) {
+			mlfqs_priority(cur_thread);
+			if(ticks % 100 == 0) {
+				mlfqs_load_avg();
+				mlfqs_recalc();
+			}
+		}
+		// original
+		// if(ticks % 100 == 0) {
+		// 	mlfqs_load_avg();
+		// 	mlfqs_recalc();
+		// }
+		// else if(ticks % 4 == 0) {
+		// 	mlfqs_priority(cur_thread);
+		// }
+	}
+
 	if (get_next_tick_to_awake() <= ticks){ /* 매 tick마다 sleep queue에서 깨어날 thread가 있는지 확인하여, 
 깨우는 함수를 호출하도록 한다. */
 		thread_awake(ticks);
 	}
+
+	//mlfqs 추가
+	/* mlfqs 스케줄러일 경우
+	timer_interrupt 가 발생할때 마다 recuent_cpu 1증가,
+	1초마다 load_avg, recent_cpu, priority 계산,
+	매 4tick마다 priority 계산 */
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

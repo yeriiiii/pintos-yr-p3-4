@@ -176,8 +176,16 @@ process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
+	char *parse, *save_ptr, *token;
+	memcpy(parse, file_name, strlen(file_name) + 1);
+    for (token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr));
+
 	/* And then load the binary */
 	success = load (file_name, &_if);
+
+	argument_stack(parse, &_if.rsp);
+
+	hex_dump(_if.rsp,_if.rsp, USER_STACK - _if.rsp,true);
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
@@ -189,6 +197,43 @@ process_exec (void *f_name) {
 	NOT_REACHED ();
 }
 
+void argument_stack(char *parse, void **rsp) {
+	int i, j, count = 0;
+	char *ptr[128], *token[128];
+
+	for (token[count] = strtok_r (parse, " ", &ptr); token[count] != NULL; token[count] = strtok_r (NULL, " ", &ptr)){
+		count += 1;
+	}
+
+	for (i = count - 1; i > -1; i--) {
+		ptr[i] = *rsp - 1;
+		for(j = strlen(token[i]); j > -1; j--) {
+			*rsp = *rsp - 1;
+			**(char **)rsp = token[i][j];
+		}
+	}
+
+	// word-align
+	while ((unsigned long)(*rsp) % 8 != 0) {
+		*rsp = *rsp - 1;
+		**(char **)rsp = 0;
+	}
+ 	// 구역 나누기 위함
+	for (int i = 0; i < 8; i++) {
+		*rsp = *rsp - 1;
+		**(char **)rsp = 0;
+	}
+	// 주소값 넣는 부분
+	for (i = count - 1; i > -1; i--) {
+		*rsp = *rsp - 8;
+		**(uint64_t**)rsp = ptr[i];
+	}
+	// fake address
+	for (i = 0; i < 8; i++) {
+		*rsp = *rsp - 1;
+		**(char **)rsp = 0;
+	}
+}
 
 /* Waits for thread TID to die and returns its exit status.  If
  * it was terminated by the kernel (i.e. killed due to an
@@ -204,6 +249,7 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
+	thread_set_priority(thread_get_priority()-1);
 	return -1;
 }
 
@@ -329,6 +375,12 @@ load (const char *file_name, struct intr_frame *if_) {
 	bool success = false;
 	int i;
 
+	char *parse, *save_ptr;
+	int count = 0;
+    for (parse = strtok_r (file_name, " ", &save_ptr); parse != NULL; parse = strtok_r (NULL, " ", &save_ptr)){
+		count += 1;
+	}
+
 	/* Allocate and activate page directory. */
 	t->pml4 = pml4_create ();
 	if (t->pml4 == NULL)
@@ -416,7 +468,6 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
-
 	success = true;
 
 done:
