@@ -160,7 +160,6 @@ error:
 
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
-int c;
 int
 process_exec (void *f_name) {
 	char *file_name = f_name;
@@ -177,17 +176,16 @@ process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
-    char *token, *save_ptr;
-	int count = 1;
-    for (token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)){
-		count += 1;
-	}
-	c = count;
+	char *parse, *save_ptr, *token;
+	memcpy(parse, file_name, strlen(file_name) + 1);
+    for (token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr));
 
 	/* And then load the binary */
 	success = load (file_name, &_if);
 
-	hex_dump(_if.rsp, _if.rsp, KERN_BASE - _if.rsp, true);
+	argument_stack(parse, &_if.rsp);
+
+	hex_dump(_if.rsp,_if.rsp, USER_STACK - _if.rsp,true);
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
@@ -199,40 +197,42 @@ process_exec (void *f_name) {
 	NOT_REACHED ();
 }
 
-void argument_stack(char **parse, int count, void **rsp) {
-	int i, j;
-	char *ptr[count];
-	for (i = count; i > -1; i--) {
-		*ptr[i] = *rsp - 1;
-		for(j = strlen(parse[i]); j > -1; j--) {
-			*rsp = *rsp - 1;
-			**(char **)rsp = parse[i][j];
-		}
-		printf("parse : %s\n", parse[i]);
+void argument_stack(char *parse, void **rsp) {
+	int i, j, count = 0;
+	char *ptr[128], *token[128];
+
+	for (token[count] = strtok_r (parse, " ", &ptr); token[count] != NULL; token[count] = strtok_r (NULL, " ", &ptr)){
+		count += 1;
 	}
 
-	memset(*rsp, 0, 8 - ((unsigned long)(*rsp) % 8));
+	for (i = count - 1; i > -1; i--) {
+		ptr[i] = *rsp - 1;
+		for(j = strlen(token[i]); j > -1; j--) {
+			*rsp = *rsp - 1;
+			**(char **)rsp = token[i][j];
+		}
+	}
+
+	// word-align
 	while ((unsigned long)(*rsp) % 8 != 0) {
 		*rsp = *rsp - 1;
 		**(char **)rsp = 0;
 	}
- 	//*rsp = *rsp + 8 - ((unsigned long)(*rsp) % 8);
+ 	// 구역 나누기 위함
 	for (int i = 0; i < 8; i++) {
 		*rsp = *rsp - 1;
 		**(char **)rsp = 0;
 	}
-
-	for (i = count; i > -1; i--) {
+	// 주소값 넣는 부분
+	for (i = count - 1; i > -1; i--) {
 		*rsp = *rsp - 8;
-		**(char **)rsp = *ptr[i];
+		**(uint64_t**)rsp = ptr[i];
 	}
-
 	// fake address
-	for (int i = 0; i < 8; i++) {
+	for (i = 0; i < 8; i++) {
 		*rsp = *rsp - 1;
 		**(char **)rsp = 0;
 	}
-
 }
 
 /* Waits for thread TID to die and returns its exit status.  If
@@ -249,7 +249,7 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	while(1);
+	thread_set_priority(thread_get_priority()-1);
 	return -1;
 }
 
@@ -375,6 +375,12 @@ load (const char *file_name, struct intr_frame *if_) {
 	bool success = false;
 	int i;
 
+	char *parse, *save_ptr;
+	int count = 0;
+    for (parse = strtok_r (file_name, " ", &save_ptr); parse != NULL; parse = strtok_r (NULL, " ", &save_ptr)){
+		count += 1;
+	}
+
 	/* Allocate and activate page directory. */
 	t->pml4 = pml4_create ();
 	if (t->pml4 == NULL)
@@ -462,8 +468,6 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
-	argument_stack(*file_name, c, if_->rsp);
-
 	success = true;
 
 done:
