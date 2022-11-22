@@ -10,7 +10,10 @@
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
-
+bool create (const char *file, unsigned initial_size);
+void halt (void);
+void exit (int status);
+void check_address(void *addr);
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -64,9 +67,9 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		// case SYS_WAIT:
 		// 	wait(f->R.rdi);
 		// 	break;
-		// case SYS_CREATE:
-		// 	create(f->R.rdi, f->R.rsi);
-		// 	break;
+		case SYS_CREATE:
+			create(f->R.rdi, f->R.rsi);
+			break;
 		// case SYS_REMOVE:
 		// 	remove(f->R.rdi);
 		// 	break;
@@ -91,6 +94,8 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		// case SYS_CLOSE:
 		// 	close(f->R.rdi);
 		// 	break;	
+		default:
+			break;
 	}
 
 // 시스템 콜의 함수의 리턴 값은 인터럽트 프레임의 eax에 저장
@@ -99,9 +104,10 @@ syscall_handler (struct intr_frame *f UNUSED) {
 }
 
 void check_address(void *addr) {
-	if(!is_user_vaddr(addr)){
-		process_exit();
+	if((!is_user_vaddr(addr)) || (pml4_get_page(thread_current()->pml4, addr)) == NULL||(addr == NULL)){	
+		exit(-1);
 	}
+
 /* 포인터가 가리키는 주소가 유저영역의 주소인지 확인 */
 /* 잘못된 접근일 경우 프로세스 종료 */
 }
@@ -120,10 +126,11 @@ exit (int status) {
 	thread_exit();
 }
 
-// bool 
-// create (const char *file, unsigned initial_size) {
-// 	return filesys_create(file, initial_size); // directory:filesys / filesys.c 
-// }
+bool 
+create (const char *file, unsigned initial_size) {
+	check_address(file);
+	return filesys_create(file, initial_size); // directory:filesys / filesys.c 
+}
 
 // bool
 // remove (const char *file) {
