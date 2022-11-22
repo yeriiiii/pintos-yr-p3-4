@@ -428,7 +428,7 @@ load (const char *file_name, struct intr_frame *if_) {
 	if_->R.rdi = count;
 	if_->R.rsi = if_->rsp+8;
 	printf("rsi = %p\n", if_->R.rsi);
-	
+	printf("rdi = %d\n", if_->R.rdi);
 	success = true;
 
 done:
@@ -442,7 +442,7 @@ void argument_stack(char **token, int count, void **rsp) {
 	char *ptr[128];
 
 	for (i = count - 1; i > -1; i--) {
-		ptr[i] = *rsp - 1;
+		ptr[i] = *rsp - strlen(token[i])-1;
 		for(j = strlen(token[i]); j > -1; j--) {
 			*rsp = *rsp - 1;
 			**(char **)rsp = token[i][j];
@@ -683,3 +683,12 @@ setup_stack (struct intr_frame *if_) {
 	return success;
 }
 #endif /* VM */
+
+// project 2 user program
+struct thread *get_child_process(int pid){
+
+}
+
+void remove_child_process(struct thread *cp){
+
+}
