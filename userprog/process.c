@@ -426,7 +426,8 @@ load (const char *file_name, struct intr_frame *if_) {
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
 	argument_stack(token, count, &if_->rsp);
 	if_->R.rdi = count;
-	if_->R.rsi = if_->rsp+16;
+	if_->R.rsi = if_->rsp+8;
+	printf("rsi = %p\n", if_->R.rsi);
 	
 	success = true;
 
