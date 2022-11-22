@@ -40,7 +40,18 @@ syscall_init (void) {
 /* The main system call interface */
 void
 syscall_handler (struct intr_frame *f UNUSED) {
-	// TODO: Your implementation goes here.
+// TODO: Your implementation goes here.
+	f->rsp;
+	f->R.rax;
+	check_address(f->rsp);
+	check_address(f->R.rax);
+	
+// 	시스템 콜 핸들러에서 시스템 콜 번호에 해당하는 시스템 콜 호출
+// 시스템 콜 핸들러에서 유저 스택 포인터(esp) 주소와 인자가 가리키는 주소(
+// 포인터)가 유저 영역인지 확인
+// pintos는 유저영역을 벗어난 주소를 참조할 경우 페이지 폴트 발생
+// 유저 스택에 있는 인자들을 커널에 저장
+// 시스템 콜의 함수의 리턴 값은 인터럽트 프레임의 eax에 저장
 	printf ("system call!\n");
 	thread_exit ();
 }
