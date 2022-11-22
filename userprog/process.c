@@ -425,6 +425,9 @@ load (const char *file_name, struct intr_frame *if_) {
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
 	argument_stack(token, count, &if_->rsp);
+	if_->R.rdi = count;
+	if_->R.rsi = if_->rsp+16;
+	
 	success = true;
 
 done:
