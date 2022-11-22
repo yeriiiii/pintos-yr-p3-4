@@ -41,10 +41,10 @@ syscall_init (void) {
 void
 syscall_handler (struct intr_frame *f UNUSED) {
 // TODO: Your implementation goes here.
-	f->rsp;
-	f->R.rax;
-	check_address(f->rsp);
-	check_address(f->R.rax);
+	// f->rsp;
+	// f->R.rax;
+	// check_address(f->rsp);
+	// check_address(f->R.rax);
 
 	int syscall_number = f->R.rax;
 
@@ -94,8 +94,8 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	}
 
 // 시스템 콜의 함수의 리턴 값은 인터럽트 프레임의 eax에 저장
-	printf ("system call!\n");
-	thread_exit ();
+	// printf ("system call!\n");
+	// thread_exit ();
 }
 
 void check_address(void *addr) {
@@ -114,7 +114,10 @@ halt (void) {
 
 void
 exit (int status) {
-	process_exit();
+	struct thread *cur_thread = thread_current();
+	cur_thread->exit_status = status;
+	printf("%s: exit(%d)\n", cur_thread->name, status);
+	thread_exit();
 }
 
 // bool 
