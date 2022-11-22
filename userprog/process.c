@@ -179,7 +179,7 @@ process_exec (void *f_name) {
 	/* And then load the binary */
 	success = load (file_name, &_if);
 
-	hex_dump(_if.rsp,_if.rsp, USER_STACK - _if.rsp,true);
+	// hex_dump(_if.rsp,_if.rsp, USER_STACK - _if.rsp,true);
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
@@ -427,8 +427,8 @@ load (const char *file_name, struct intr_frame *if_) {
 	argument_stack(token, count, &if_->rsp);
 	if_->R.rdi = count;
 	if_->R.rsi = if_->rsp+8;
-	printf("rsi = %p\n", if_->R.rsi);
-	printf("rdi = %d\n", if_->R.rdi);
+	// printf("rsi = %p\n", if_->R.rsi);
+	// printf("rdi = %d\n", if_->R.rdi);
 	success = true;
 
 done:
