@@ -10,10 +10,25 @@
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
-bool create (const char *file, unsigned initial_size);
+void check_address(void *addr);
+
 void halt (void);
 void exit (int status);
-void check_address(void *addr);
+bool create (const char *file, unsigned initial_size);
+bool remove (const char *file);
+
+int open (const char *file);
+int filesize (int fd);
+int read (int fd, void *buffer, unsigned size);
+int write (int fd, const void *buffer, unsigned size);
+void seek (int fd, unsigned position);
+unsigned tell (int fd);
+void close (int fd);
+
+pid_t fork (const char *thread_name);
+int exec (const char *cmd_line);
+int wait (pid_t pid);
+
 /* System call.
  *
  * Previously system call services was handled by the interrupt handler
@@ -70,9 +85,9 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		case SYS_CREATE:
 			create(f->R.rdi, f->R.rsi);
 			break;
-		// case SYS_REMOVE:
-		// 	remove(f->R.rdi);
-		// 	break;
+		case SYS_REMOVE:
+			remove(f->R.rdi);
+			break;
 		// case SYS_OPEN:
 		// 	open(f->R.rdi);
 		// 	break;
@@ -132,11 +147,11 @@ create (const char *file, unsigned initial_size) {
 	return filesys_create(file, initial_size); // directory:filesys / filesys.c 
 }
 
-// bool
-// remove (const char *file) {
-// 	return filesys_remove(file); // directory:filesys / filesys.c
-// }
-// // Parent~child struct 구현 
+bool
+remove (const char *file) {
+	return filesys_remove(file); // directory:filesys / filesys.c
+}
+// Parent~child struct 구현 
 
 // tid_t exec(const char* cmd_line){
 
