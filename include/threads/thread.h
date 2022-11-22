@@ -103,6 +103,17 @@ struct thread {
 	int nice;
 	int recent_cpu;
 	struct list_elem all_elem;
+	// user program 추가 project 2
+
+	struct thread *parent_thread;				/* 부모 프로세스의 디스크립터 */
+	struct list_elem child_elem; /* 자식 리스트 element */
+	struct list childs;			 /* 자식 리스트 */
+	// bool is_in_memory;			 /* 프로세스의 프로그램 메모리 적재 유무 */
+	// bool is_terminated;			 /* 프로세스가 종료 유무 확인 */
+	// struct semaphore *exit_sema; /* exit 세마포어 */
+	// struct semaphore *load_sema;  /* load 세마포어 */
+	int exit_status; /* exit 호출 시 종료 status */
+
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */

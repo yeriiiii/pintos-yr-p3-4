@@ -177,17 +177,8 @@ process_exec (void *f_name) {
 	/* We first kill the current context */
 	process_cleanup ();
 
-	char *parse, *save_ptr, *token;
-	memcpy(parse, file_name, strlen(file_name) + 1);
-    for (token = strtok_r (file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr));
-
 	/* And then load the binary */
 	success = load (file_name, &_if);
-
-	argument_stack(parse, &_if.rsp);
-
-	_if.R.rdi = count;
-	_if.R.rsi = _if.rsp + 8;
 
 	// hex_dump(_if.rsp,_if.rsp, USER_STACK - _if.rsp,true);
 
@@ -199,44 +190,6 @@ process_exec (void *f_name) {
 	/* Start switched process. */
 	do_iret (&_if);
 	NOT_REACHED ();
-}
-
-void argument_stack(char *parse, void **rsp) {
-	int i, j, count = 0;
-	char *ptr[128], *token[128];
-
-	for (token[count] = strtok_r (parse, " ", &ptr); token[count] != NULL; token[count] = strtok_r (NULL, " ", &ptr)){
-		count += 1;
-	}
-
-	for (i = count - 1; i > -1; i--) {
-		ptr[i] = *rsp - 1;
-		for(j = strlen(token[i]); j > -1; j--) {
-			*rsp = *rsp - 1;
-			**(char **)rsp = token[i][j];
-		}
-	}
-
-	// word-align
-	while ((unsigned long)(*rsp) % 8 != 0) {
-		*rsp = *rsp - 1;
-		**(char **)rsp = 0;
-	}
- 	// 구역 나누기 위함
-	for (int i = 0; i < 8; i++) {
-		*rsp = *rsp - 1;
-		**(char **)rsp = 0;
-	}
-	// 주소값 넣는 부분
-	for (i = count - 1; i > -1; i--) {
-		*rsp = *rsp - 8;
-		**(uint64_t**)rsp = ptr[i];
-	}
-	// fake address
-	for (i = 0; i < 8; i++) {
-		*rsp = *rsp - 1;
-		**(char **)rsp = 0;
-	}
 }
 
 /* Waits for thread TID to die and returns its exit status.  If
@@ -379,9 +332,9 @@ load (const char *file_name, struct intr_frame *if_) {
 	bool success = false;
 	int i;
 
-	char *parse, *save_ptr;
+	char *parse, *save_ptr, *token[128];
 	int count = 0;
-    for (parse = strtok_r (file_name, " ", &save_ptr); parse != NULL; parse = strtok_r (NULL, " ", &save_ptr)){
+	for (token[count] = strtok_r (file_name, " ", &save_ptr); token[count] != NULL; token[count] = strtok_r (NULL, " ", &save_ptr)){
 		count += 1;
 	}
 
@@ -472,6 +425,11 @@ load (const char *file_name, struct intr_frame *if_) {
 
 	/* TODO: Your code goes here.
 	 * TODO: Implement argument passing (see project2/argument_passing.html). */
+	argument_stack(token, count, &if_->rsp);
+	if_->R.rdi = count;
+	if_->R.rsi = if_->rsp+8;
+	// printf("rsi = %p\n", if_->R.rsi);
+	// printf("rdi = %d\n", if_->R.rdi);
 	success = true;
 
 done:
@@ -480,6 +438,40 @@ done:
 	return success;
 }
 
+void argument_stack(char **token, int count, void **rsp) {
+	int i, j;
+	char *ptr[128];
+
+	for (i = count - 1; i > -1; i--) {
+		ptr[i] = *rsp - strlen(token[i])-1;
+		for(j = strlen(token[i]); j > -1; j--) {
+			*rsp = *rsp - 1;
+			**(char **)rsp = token[i][j];
+		}
+	}
+
+	// word-align
+	while ((unsigned long)(*rsp) % 8 != 0) {
+		*rsp = *rsp - 1;
+		**(char **)rsp = 0;
+	}
+ 	// 구역 나누기 위함
+	for (int i = 0; i < 8; i++) {
+		*rsp = *rsp - 1;
+		**(char **)rsp = 0;
+	}
+	// 주소값 넣는 부분
+	for (i = count - 1; i > -1; i--) {
+		*rsp = *rsp - 8;
+		**(uint64_t**)rsp = ptr[i];
+	}
+	// fake address
+	for (i = 0; i < 8; i++) {
+		*rsp = *rsp - 1;
+		**(char **)rsp = 0;
+	}
+}
+//test
 
 /* Checks whether PHDR describes a valid, loadable segment in
  * FILE and returns true if so, false otherwise. */
@@ -692,3 +684,12 @@ setup_stack (struct intr_frame *if_) {
 	return success;
 }
 #endif /* VM */
+
+// project 2 user program
+struct thread *get_child_process(int pid){
+
+}
+
+void remove_child_process(struct thread *cp){
+
+}
