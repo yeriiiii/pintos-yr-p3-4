@@ -164,6 +164,7 @@ int
 process_exec (void *f_name) {
 	char *file_name = f_name;
 	bool success;
+	int count = 0;
 
 	/* We cannot use the intr_frame in the thread structure.
 	 * This is because when current thread rescheduled,
@@ -185,7 +186,10 @@ process_exec (void *f_name) {
 
 	argument_stack(parse, &_if.rsp);
 
-	hex_dump(_if.rsp,_if.rsp, USER_STACK - _if.rsp,true);
+	_if.R.rdi = count;
+	_if.R.rsi = _if.rsp + 8;
+
+	// hex_dump(_if.rsp,_if.rsp, USER_STACK - _if.rsp,true);
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
