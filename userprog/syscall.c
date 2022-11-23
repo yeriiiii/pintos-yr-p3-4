@@ -18,9 +18,9 @@ bool create (const char *file, unsigned initial_size);
 bool remove (const char *file);
 
 int open (const char *file);
-// int filesize (int fd);
+int filesize (int fd);
 // int read (int fd, void *buffer, unsigned size);
-// int write (int fd, const void *buffer, unsigned size);
+int write (int fd, const void *buffer, unsigned size);
 // void seek (int fd, unsigned position);
 // unsigned tell (int fd);
 // void close (int fd);
@@ -63,7 +63,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	// f->R.rax;
 	// check_address(f->rsp);
 	// check_address(f->R.rax);
-
+	
 	int syscall_number = f->R.rax;
 
 	switch (syscall_number){
@@ -83,13 +83,13 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		// 	wait(f->R.rdi);
 		// 	break;
 		case SYS_CREATE:
-			create(f->R.rdi, f->R.rsi);
+			f->R.rax = create(f->R.rdi, f->R.rsi);
 			break;
 		case SYS_REMOVE:
-			remove(f->R.rdi);
+			f->R.rax = remove(f->R.rdi);
 			break;
 		case SYS_OPEN:
-			open(f->R.rdi);
+			f->R.rax = open(f->R.rdi);
 			break;
 		// case SYS_FILESIZE:
 		// 	filesize(f->R.rdi);
@@ -98,7 +98,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		// 	read(f->R.rdi, f->R.rsi, f->R.rdx);
 		// 	break;
 		case SYS_WRITE:
-			write(f->R.rdi, f->R.rsi, f->R.rdx);
+			f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 			break;
 		// case SYS_SEEK:
 		// 	seek(f->R.rdi, f->R.rsi);
