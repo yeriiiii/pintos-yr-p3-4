@@ -248,6 +248,15 @@ thread_create(const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 
+	// file descriptor setting project 2
+	t->fd_table = palloc_get_multiple(PAL_ZERO, FDT_PAGES);
+	if (t->fd_table = NULL){
+		return TID_ERROR;
+	}
+
+	t->fd = 2;
+	t->fd_table[0] = 0;
+	t->fd_table[1] = 1;
 
 	/* Add to run queue. */
 	thread_unblock (t);
@@ -566,6 +575,9 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->nice = NICE_DEFAULT;
 	t->recent_cpu = RECENT_CPU_DEFAULT;
 	list_push_back(&all_list, &t->all_elem);
+
+	//project 2
+	t->exit_status = 0;
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should

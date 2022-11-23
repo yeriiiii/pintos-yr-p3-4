@@ -28,6 +28,11 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+//project 2 file
+#define FDCOUNT_LIMIT 128
+#define FDT_PAGES 3
+#define FDT_COUNT_LIMIT FDT_PAGES *(1<<9) // limit fd
+
 /* A kernel thread or user process.
  *
  * Each thread structure is stored in its own 4 kB page.  The
@@ -103,8 +108,8 @@ struct thread {
 	int nice;
 	int recent_cpu;
 	struct list_elem all_elem;
-	// user program 추가 project 2
 
+	// user program 추가 project 2
 	struct thread *parent_thread;				/* 부모 프로세스의 디스크립터 */
 	struct list_elem child_elem; /* 자식 리스트 element */
 	struct list childs;			 /* 자식 리스트 */
@@ -113,6 +118,11 @@ struct thread {
 	// struct semaphore *exit_sema; /* exit 세마포어 */
 	// struct semaphore *load_sema;  /* load 세마포어 */
 	int exit_status; /* exit 호출 시 종료 status */
+
+	// file descriptor
+	int fd;
+	struct file **fd_table;
+
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
