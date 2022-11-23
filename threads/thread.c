@@ -248,10 +248,10 @@ thread_create(const char *name, int priority,
 	t->tf.cs = SEL_KCSEG;
 	t->tf.eflags = FLAG_IF;
 
-	// file descriptor setting project 2
+	//file descriptor setting project 2
 	t->fd_table = palloc_get_multiple(PAL_ZERO, FDT_PAGES);
-	if (t->fd_table = NULL){
-		return TID_ERROR;
+	if (t->fd_table == NULL){
+		thread_exit();
 	}
 
 	t->fd = 2;
