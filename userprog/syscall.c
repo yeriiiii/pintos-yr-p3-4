@@ -82,7 +82,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		// case SYS_WAIT:
 		// 	wait(f->R.rdi);
 		// 	break;
-		case SYS_CREATE:
+		case SYS_CREATE: // return 값이 있는 함수들은 레지스터의 rax에서 확인
 			f->R.rax = create(f->R.rdi, f->R.rsi);
 			break;
 		case SYS_REMOVE:
@@ -91,9 +91,9 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		case SYS_OPEN:
 			f->R.rax = open(f->R.rdi);
 			break;
-		// case SYS_FILESIZE:
-		// 	filesize(f->R.rdi);
-		// 	break;
+		case SYS_FILESIZE:
+			filesize(f->R.rdi);
+			break;
 		// case SYS_READ:
 		// 	read(f->R.rdi, f->R.rsi, f->R.rdx);
 		// 	break;
@@ -180,11 +180,11 @@ int open (const char *file){
 };
 
 int filesize(int fd){
-	struct file *cur_file = process_get_file(fd);
-	if (cur_file == NULL){
+	struct file *cur_file = process_get_file(fd); // 해당 파일 을 가져온다.
+	if (cur_file == NULL){ // 파일 유효 확인
 		return -1;
 	}
-	return file_length(cur_file);
+	return file_length(cur_file); //struct file -> struct inode -> struct inode_disk data -> off_t length에 정보가 담겨있다.
 }
 
 // int read (int fd, void *buffer, unsigned size){
