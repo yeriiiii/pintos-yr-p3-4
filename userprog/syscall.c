@@ -18,16 +18,16 @@ bool create (const char *file, unsigned initial_size);
 bool remove (const char *file);
 
 int open (const char *file);
-int filesize (int fd);
-int read (int fd, void *buffer, unsigned size);
-int write (int fd, const void *buffer, unsigned size);
-void seek (int fd, unsigned position);
-unsigned tell (int fd);
-void close (int fd);
+// int filesize (int fd);
+// int read (int fd, void *buffer, unsigned size);
+// int write (int fd, const void *buffer, unsigned size);
+// void seek (int fd, unsigned position);
+// unsigned tell (int fd);
+// void close (int fd);
 
-pid_t fork (const char *thread_name);
-int exec (const char *cmd_line);
-int wait (pid_t pid);
+// pid_t fork (const char *thread_name);
+// int exec (const char *cmd_line);
+// int wait (pid_t pid);
 
 /* System call.
  *
@@ -88,9 +88,9 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		case SYS_REMOVE:
 			remove(f->R.rdi);
 			break;
-		// case SYS_OPEN:
-		// 	open(f->R.rdi);
-		// 	break;
+		case SYS_OPEN:
+			open(f->R.rdi);
+			break;
 		// case SYS_FILESIZE:
 		// 	filesize(f->R.rdi);
 		// 	break;
@@ -162,3 +162,60 @@ int write (int fd, const void *buffer, unsigned size) {
 		return size;
 	}
 }
+
+int open (const char *file){
+	check_address(file); // 파일 유효 주소 확인
+	struct file *open_file = filesys_open(file); // 파일 오픈 및 파일 명 지정
+	if (open_file == NULL){ // 오픈 파일 명 값 확인
+		return -1;
+	}	
+	int open_file_fd = process_add_file(open_file); // 오픈 파일 파일 디스크립터 테이블에 추가
+	if (open_file_fd == -1){			//실패시
+		process_close_file(open_file_fd);	 // 파일 닫기
+	} 
+	return open_file_fd;	 // 성공시 fd값 리턴
+	// 파일을 열 때 사용하는 시스템 콜
+	// 성공 시 fd를 생성하고 반환, 실패 시 -1 반환
+ 	// File : 파일의 이름 및 경로 정보
+};
+
+int filesize(int fd){
+	struct file *cur_file = process_get_file(fd);
+	if (cur_file == NULL){
+		return -1;
+	}
+	return file_length(cur_file);
+}
+
+// int read (int fd, void *buffer, unsigned size){
+
+// };
+
+// // int write (int fd, const void *buffer, unsigned size){
+
+// // };
+
+// void seek (int fd, unsigned position){
+
+// };
+
+// unsigned tell (int fd){
+
+// };
+
+// void close (int fd){
+
+// };
+
+
+// pid_t fork (const char *thread_name){
+	
+// };
+
+// int exec (const char *cmd_line){
+
+// };
+
+// int wait (pid_t pid){
+
+// };
