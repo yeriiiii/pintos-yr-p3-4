@@ -740,13 +740,15 @@ struct file *process_get_file(int fd)
 	/* 없을 시 NULL 리턴 */
 }
 
-void process_close_file(int fd) {
-	struct thread* cur_thread = thread_current();
-	struct file *cur_file = process_get_file(fd); // 해당 하는 파일 얻어오기
-	if (cur_file == NULL){ // 해당 파일 유효 체크
-		return;
-	}
-	filesys_remove(fd); // ?? 잘 모르겠음
-	/* 파일 디스크립터에 해당하는 파일을 닫음 */
-	/* 파일 디스크립터 테이블 해당 엔트리 초기화 */
-}
+// void process_close_file(int fd) {
+// 	struct thread* cur_thread = thread_current();
+// 	struct file *cur_file = process_get_file(fd); // 해당 하는 파일 얻어오기
+// 	if (cur_file == NULL){ // 해당 파일 유효 체크
+// 		return;
+// 	}
+// 	check_address(cur_file);
+// 	file_close(cur_file);
+// 	cur_thread->fd_table[fd] = NULL;
+// 	/* 파일 디스크립터에 해당하는 파일을 닫음 */
+// 	/* 파일 디스크립터 테이블 해당 엔트리 초기화 */
+// }

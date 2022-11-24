@@ -25,9 +25,9 @@ int open (const char *file);
 int filesize (int fd);
 int read (int fd, void *buffer, unsigned size);
 int write (int fd, const void *buffer, unsigned size);
-// void seek (int fd, unsigned position);
-// unsigned tell (int fd);
-// void close (int fd);
+void seek (int fd, unsigned position);
+unsigned tell (int fd);
+void close (int fd);
 
 // pid_t fork (const char *thread_name);
 // int exec (const char *cmd_line);
@@ -105,15 +105,15 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		case SYS_WRITE:
 			f->R.rax = write(f->R.rdi, f->R.rsi, f->R.rdx);
 			break;
-		// case SYS_SEEK:
-		// 	seek(f->R.rdi, f->R.rsi);
-		// 	break;
-		// case SYS_TELL:
-		// 	tell(f->R.rdi);
-		// 	break;
-		// case SYS_CLOSE:
-		// 	close(f->R.rdi);
-		// 	break;	
+		case SYS_SEEK:
+			seek(f->R.rdi, f->R.rsi);
+			break;
+		case SYS_TELL:
+			f->R.rax = tell(f->R.rdi);
+			break;
+		case SYS_CLOSE:
+			close(f->R.rdi);
+			break;	
 		default:
 			break;
 	}
@@ -167,7 +167,7 @@ int open (const char *file){
 	}	
 	int open_file_fd = process_add_file(open_file); // 오픈 파일 파일 디스크립터 테이블에 추가
 	if (open_file_fd == -1){			//실패시
-		process_close_file(open_file_fd);	 // 파일 닫기
+		close(open_file_fd);	 // 파일 닫기
 	} 
 	return open_file_fd;	 // 성공시 fd값 리턴
 	// 파일을 열 때 사용하는 시스템 콜
@@ -243,17 +243,40 @@ int write (int fd, const void *buffer, unsigned size){
 
 };
 
-// void seek (int fd, unsigned position){
+void seek (int fd, unsigned position){
+	if (fd < 2){
+		return;
+	} 
+	struct file *get_file = process_get_file(fd); // 파일 가져오기
+	if (get_file == NULL){
+		return;
+	}
+	file_seek(get_file, position);
+};
 
-// };
+unsigned tell (int fd){
+	if (fd < 2){
+		return;
+	} 
+	struct file *get_file = process_get_file(fd); // 파일 가져오기
+	if (get_file == NULL){
+		return;
+	}
+	return file_tell(get_file);
+};
 
-// unsigned tell (int fd){
-
-// };
-
-// void close (int fd){
-
-// };
+void close (int fd){
+	if (fd < 2){
+		return;
+	} 
+	struct thread* cur_thread = thread_current();
+	struct file *get_file = process_get_file(fd); // 파일 가져오기
+	if (get_file == NULL){
+		return;
+	}
+	file_close(get_file);
+	cur_thread->fd_table[fd] = NULL; // fd 초기화
+};
 
 
 // pid_t fork (const char *thread_name){
