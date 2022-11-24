@@ -222,7 +222,11 @@ process_exit (void) {
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
-
+	// int i = strlen(curr->fd_table);
+	// int fd;
+	// while (i != 2){
+	// 	filesys_remove(fd);
+	// }
 	/* 프로세스에 열린 모든 파일을 닫음 */
 	/* 파일 디스크립터 테이블의 최대값을 이용해 파일 디스크립터
 	의 최소값인 2가 될 때까지 파일을 닫음 */
@@ -702,31 +706,34 @@ void remove_child_process(struct thread *cp){
 
 }
 
-int process_add_file(struct file *f){
-	struct thread* cur_thread = thread_current();
-	struct file **fd_table = cur_thread->fd_table;
-	int fd = cur_thread->fd;
+int process_add_file(struct file *f){ 
+	struct thread* cur_thread = thread_current(); //현재 스레드
+	struct file **fd_table = cur_thread->fd_table; // 현재 스레드의 파일 디스크립터 테이블
+	int fd = cur_thread->fd; // 현재 스레드의 파일 디스크립터
 
-	while (cur_thread->fd_table[fd] != NULL && fd <FDCOUNT_LIMIT){
+	while (cur_thread->fd_table[fd] != NULL && fd <FDCOUNT_LIMIT){ // fdt에 빈 자리가 날 때까지 fd 값을 계속 1씩 올린다. 그래서 자리가 나면 해당 자리에 파일을 배치하고 해당 디스크립터 값(=fdt의 인덱스)를 반환한다.
 		fd++;
 	}
 
-	if (fd > FDCOUNT_LIMIT){
+	if (fd > FDCOUNT_LIMIT){  // 오류시 리턴 -1 
 		return -1;
 	}
-	cur_thread->fd = fd;
-	fd_table[fd] = f;
-	return fd;
+	cur_thread->fd = fd; // 새 식별자 
+	fd_table[fd] = f; // 새식별자가 파일을 가리키도록 설정
+	return fd; // 파일 디스크립터 리턴
+	/* 파일 객체를 파일 디스크립터 테이블에 추가 */
+	/* 파일 디스크립터의 최대값 1 증가 */
+	/* 파일 디스크립터 리턴 */
 }
 
 struct file *process_get_file(int fd)
 {
-	if (fd < 0 || fd >= FDCOUNT_LIMIT){
+	if (fd < 0 || fd >= FDCOUNT_LIMIT){ // 파일 디스크립터 유효 검사
 		return NULL;
 	}
-	struct thread* cur_thread = thread_current();
+	struct thread *cur_thread = thread_current();
 	struct file **fd_table = cur_thread->fd_table;
-	struct file *file = fd_table[fd];
+	struct file *file = fd_table[fd]; // 파일 디스크립터 테이블에서 해당 파일 디스크립터를 찾는다.
 	return file;
 
 	/* 파일 디스크립터에 해당하는 파일 객체를 리턴 */
@@ -739,7 +746,7 @@ void process_close_file(int fd) {
 	if (cur_file == NULL){ // 해당 파일 유효 체크
 		return;
 	}
-	filesys_remove(fd); 
+	filesys_remove(fd); // ?? 잘 모르겠음
 	/* 파일 디스크립터에 해당하는 파일을 닫음 */
 	/* 파일 디스크립터 테이블 해당 엔트리 초기화 */
 }
