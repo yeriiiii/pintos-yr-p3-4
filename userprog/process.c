@@ -715,7 +715,7 @@ int process_add_file(struct file *f){
 		fd++;
 	}
 
-	if (fd > FDCOUNT_LIMIT){  // 오류시 리턴 -1 
+	if (fd >= FDCOUNT_LIMIT){  // 오류시 리턴 -1 
 		return -1;
 	}
 	cur_thread->fd = fd; // 새 식별자 
@@ -727,7 +727,7 @@ int process_add_file(struct file *f){
 }
 
 struct file *process_get_file(int fd)
-{
+{	
 	if (fd < 0 || fd >= FDCOUNT_LIMIT){ // 파일 디스크립터 유효 검사
 		return NULL;
 	}
