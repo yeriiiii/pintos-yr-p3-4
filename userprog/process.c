@@ -222,7 +222,11 @@ process_exit (void) {
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
-
+	// int i = strlen(curr->fd_table);
+	// int fd;
+	// while (i != 2){
+	// 	filesys_remove(fd);
+	// }
 	/* 프로세스에 열린 모든 파일을 닫음 */
 	/* 파일 디스크립터 테이블의 최대값을 이용해 파일 디스크립터
 	의 최소값인 2가 될 때까지 파일을 닫음 */
