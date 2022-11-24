@@ -7,6 +7,9 @@
 #include "userprog/gdt.h"
 #include "threads/flags.h"
 #include "intrinsic.h"
+#include "userprog/process.h"
+#include "filesys/file.h"
+#include "filesys/filesys.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -93,7 +96,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 			f->R.rax = open(f->R.rdi);
 			break;
 		case SYS_FILESIZE:
-			filesize(f->R.rdi);
+			f->R.rax = filesize(f->R.rdi);
 			break;
 		case SYS_READ:
 			f->R.rax = read(f->R.rdi, f->R.rsi, f->R.rdx);
@@ -150,6 +153,7 @@ create (const char *file, unsigned initial_size) {
 
 bool
 remove (const char *file) {
+	check_address(file);
 	return filesys_remove(file); // directory:filesys / filesys.c
 }
 // Parent~child struct 구현 
@@ -185,36 +189,41 @@ int filesize(int fd){
 	if (cur_file == NULL){ // 파일 유효 확인
 		return -1;
 	}
-	return file_length(cur_file); //struct file -> struct inode -> struct inode_disk data -> off_t length에 정보가 담겨있다.
+	return file_length(cur_file);
+	// return fl; //struct file -> struct inode -> struct inode_disk data -> off_t length에 정보가 담겨있다.
 }
 
 int read (int fd, void *buffer, unsigned size){
 	check_address(buffer); // 버퍼 유효주소 확인
 	struct file *get_file = process_get_file(fd); // 파일 가져오기
+	int key_length = 0;
 
 	if (get_file == NULL){
 		return -1;
 	}
-	if (fd==0){	 // STDIN 이면
-		char key ; 
-		int key_length = 0;
-		while (key_length <= size){
-			key = input_getc(); // key 반환 (문자 하나) 
-			*(char*)buffer = key; // 버퍼에 넣어주기 (버퍼=주소 ->버퍼=문자형변환)
-			key_length ++;
-			*buffer++;
-		}
-		return key_length;
-	}	
 	
-	else if (fd==1){ // STDOUT 이면 
+	if (fd == 0){	 // STDIN 이면
+		char key;
+		while (key_length < size){
+			key = input_getc(); // key 반환 (문자 하나)
+			*(char*)buffer = key; // 버퍼에 넣어주기 (버퍼=주소 ->버퍼=문자형변환)
+			if (key == '\0') {
+				break;
+			}
+			*buffer++;
+			key_length++;
+		}
+	}
+	
+	else if (fd == 1){ // STDOUT 이면 
 		return -1; // 오류 리턴
 	}
-	else{ 	 // 이외이면
+	else { 	 // 이외이면
 		lock_acquire(&filesys_lock); // 읽는동안 락 
-		return file_read(get_file, buffer, size); // return bytes_read; //가져온 파일에서 읽고 버퍼에 넣어준다.
+		key_length = file_read(get_file, buffer, size); // return bytes_read; //가져온 파일에서 읽고 버퍼에 넣어준다.
 		lock_release(&filesys_lock); // 락 해제	
-	}	
+	}
+	return key_length;
 }
 
 // // int write (int fd, const void *buffer, unsigned size){
