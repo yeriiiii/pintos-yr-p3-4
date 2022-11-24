@@ -10,6 +10,7 @@
 #include "userprog/process.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "lib/kernel/console.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -158,16 +159,6 @@ remove (const char *file) {
 }
 // Parent~child struct 구현 
 
-// tid_t exec(const char* cmd_line){
-
-// }
-int write (int fd, const void *buffer, unsigned size) {
-	if (fd == 1) {
-		putbuf(buffer, size);
-		return size;
-	}
-}
-
 int open (const char *file){
 	check_address(file); // 파일 유효 주소 확인
 	struct file *open_file = filesys_open(file); // 파일 오픈 및 파일 명 지정
@@ -226,9 +217,31 @@ int read (int fd, void *buffer, unsigned size){
 	return key_length;
 }
 
-// // int write (int fd, const void *buffer, unsigned size){
+int write (int fd, const void *buffer, unsigned size){
+	check_address(buffer); // 버퍼 유효주소 확인
+	struct file *get_file = process_get_file(fd); // 파일 가져오기
+	int key_length;
+	if (get_file == NULL){
+		return -1;
+	}
 
-// // };
+	else if (fd == 0){
+		return -1;
+	}
+	
+	else if (fd == 1){	 
+		putbuf(buffer, size);
+		return size;
+	}
+	
+	else { 	 // 이외이면
+		lock_acquire(&filesys_lock); // 읽는동안 락 
+		key_length = file_write(get_file, buffer, size); // return bytes_read; //가져온 파일에서 읽고 버퍼에 넣어준다.
+		lock_release(&filesys_lock); // 락 해제	
+	}
+	return key_length;
+
+};
 
 // void seek (int fd, unsigned position){
 
