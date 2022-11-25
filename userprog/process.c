@@ -93,9 +93,9 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	struct thread *child_thread = get_child_process(new_tid);
 	sema_down(&child_thread->fork_sema);
 
-	if (child_thread->exit_status == -1) {
-		return TID_ERROR;
-	}
+	// if (child_thread->exit_status == -1) {
+	// 	return TID_ERROR;
+	// }
 	return new_tid;
 }
 
@@ -111,7 +111,7 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	bool writable;
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
-	if (is_kernel_vaddr(parent_page)) {
+	if (is_kernel_vaddr(va)) {
 		return true;
 	}
 
