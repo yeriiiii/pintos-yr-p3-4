@@ -86,14 +86,17 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 
 	tid_t new_tid = thread_create (name, PRI_DEFAULT, __do_fork, parent_thread); // 새로운 스레드 생성
 
-
 	if (new_tid == TID_ERROR) {
 		return TID_ERROR;
 	}
 
 	struct thread *child_thread = get_child_process(new_tid);
 	sema_down(&child_thread->fork_sema);
-	return child_thread->tid;
+
+	if (child_thread->exit_status == -1) {
+		return TID_ERROR;
+	}
+	return new_tid;
 }
 
 #ifndef VM
@@ -253,17 +256,13 @@ process_wait (tid_t child_tid UNUSED) {
 	 * XXX:       implementing the process_wait. */
 	struct thread* parent_thread = thread_current();
 	struct thread* child_thread = get_child_process(child_tid);
-	int exit_status = child_thread->exit_status;
 	if (child_thread == NULL) {
 		return -1;
 	}
-	printf("============process_wait진입==============\n");
 	sema_down(&child_thread->wait_sema);
-	printf("============sema_down끝==============\n");
+	int exit_status = child_thread->exit_status;
 	list_remove(&child_thread->child_elem);
 	sema_up(&child_thread->free_sema);
-	printf("============sema_up끝==============\n");
-
 	return exit_status;
 }
 
@@ -275,21 +274,8 @@ process_exit (void) {
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
-	// int i = strlen(curr->fd_table);
-	// int fd;
-	// while (i != 2){
-	// 	filesys_remove(fd);
-	// }
-	// int fd = curr->fd;
-	// for (fd = 2; fd < FDCOUNT_LIMIT; fd++) {
-	// 		file_close(curr->fd_table[fd]);
-	// }
-	// palloc_free_page(*curr->fd_table);
-
-	/* 프로세스에 열린 모든 파일을 닫음 */
-	/* 파일 디스크립터 테이블의 최대값을 이용해 파일 디스크립터
-	의 최소값인 2가 될 때까지 파일을 닫음 */
-	/* 파일 디스크립터 테이블 메모리 해제 */
+	sema_up(&curr->wait_sema);
+	sema_down(&curr->free_sema);
 	process_cleanup();
 }
 
@@ -759,9 +745,11 @@ setup_stack (struct intr_frame *if_) {
 // project 2 user program
 struct thread *get_child_process(int pid){
 	struct thread* cur_thread = thread_current();
+	struct list *child_list = &cur_thread->childs;
 	struct list_elem *find_child;
+
 	if(!list_empty(&cur_thread->childs)) {
-		for (find_child = list_begin(&cur_thread->childs); find_child != list_tail(&cur_thread->childs); find_child = list_next(find_child)) {
+		for (find_child = list_begin(child_list); find_child != list_end(child_list); find_child = list_next(find_child)) {
 			struct thread *child_thread = list_entry(find_child, struct thread, child_elem);
 			if (pid == child_thread->tid) {
 				return child_thread;

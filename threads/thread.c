@@ -143,7 +143,7 @@ void thread_init (void) {
 
 	/* Project 1 - Alarm Clock */
 	list_init(&sleep_list);
-	list_init(&all_list);
+	//list_init(&all_list);
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread (); 
