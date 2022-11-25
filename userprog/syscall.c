@@ -12,6 +12,7 @@
 #include "filesys/filesys.h"
 #include "lib/kernel/console.h"
 #include "include/threads/palloc.h"
+#include "lib/string.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -288,10 +289,11 @@ int fork (const char *thread_name, struct intr_frame *f){
 int exec (const char *cmd_line){
 	check_address(cmd_line);
 	char* fn_copy;
+	int size = strlen(cmd_line) + 1;
 	fn_copy = palloc_get_page(PAL_ZERO);
     if (fn_copy == NULL)
         exit(-1);
-    strlcpy (fn_copy, cmd_line, strlen(cmd_line) + 1);
+    strlcpy (fn_copy, cmd_line, size);
 	if (process_exec(fn_copy) == -1) {
 		return -1;
 	}
