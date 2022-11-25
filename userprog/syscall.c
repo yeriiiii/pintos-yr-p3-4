@@ -11,6 +11,7 @@
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "lib/kernel/console.h"
+#include "include/threads/palloc.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -29,9 +30,9 @@ void seek (int fd, unsigned position);
 unsigned tell (int fd);
 void close (int fd);
 
-// pid_t fork (const char *thread_name);
-// int exec (const char *cmd_line);
-// int wait (pid_t pid);
+int fork (const char *thread_name, struct intr_frame *f);
+int exec (const char *cmd_line);
+int wait (int pid);
 
 /* System call.
  *
@@ -70,7 +71,6 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	// check_address(f->R.rax);
 	
 	int syscall_number = f->R.rax;
-
 	switch (syscall_number){
 		case SYS_HALT:
 			halt();
@@ -78,15 +78,15 @@ syscall_handler (struct intr_frame *f UNUSED) {
 		case SYS_EXIT:
 			exit(f->R.rdi);
 			break;
-		// case SYS_FORK:
-		// 	fork(f->R.rdi);
-		// 	break;
-		// case SYS_EXEC:
-		// 	exec(f->R.rdi);
-		// 	break;
-		// case SYS_WAIT:
-		// 	wait(f->R.rdi);
-		// 	break;
+		case SYS_FORK:
+			f->R.rax = fork(f->R.rdi, f);
+			break;
+		case SYS_EXEC:
+			f->R.rax = exec(f->R.rdi);
+			break;
+		case SYS_WAIT:
+			f->R.rax = wait(f->R.rdi);
+			break;
 		case SYS_CREATE: // return 값이 있는 함수들은 레지스터의 rax에서 확인
 			f->R.rax = create(f->R.rdi, f->R.rsi);
 			break;
@@ -279,14 +279,23 @@ void close (int fd){
 };
 
 
-// pid_t fork (const char *thread_name){
-	
-// };
+int fork (const char *thread_name, struct intr_frame *f){
+	return process_fork(thread_name, f);
+};
 
-// int exec (const char *cmd_line){
+int exec (const char *cmd_line){
+	check_address(cmd_line);
+	char* fn_copy;
+	fn_copy = palloc_get_page(PAL_ZERO);
+    if (fn_copy == NULL)
+        exit(-1);
+    strlcpy (fn_copy, cmd_line, strlen(cmd_line) + 1);
+	if (process_exec(fn_copy) == -1) {
+		return -1;
+	}
+	return 0;
+}
 
-// };
-
-// int wait (pid_t pid){
-
-// };
+int wait (int pid){
+	return process_wait(pid);
+}
