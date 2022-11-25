@@ -220,6 +220,7 @@ thread_print_stats (void) {
 
 /* Project 1 - Priority Scheduling 
 Thread의 ready_list 삽입시 현재 실행중인 thread와 우선순위를 비교하여, 새로 생성된 thread의 우선순위가 높다면 thread_yield()를 통해 CPU를 양보 */
+tid_t
 thread_create(const char *name, int priority,
 			  thread_func *function, void *aux)
 {
@@ -257,6 +258,7 @@ thread_create(const char *name, int priority,
 	t->fd = 2;
 	t->fd_table[0] = 0;
 	t->fd_table[1] = 1;
+	list_push_back(&thread_current()->childs, &t->child_elem);
 
 	/* Add to run queue. */
 	thread_unblock (t);
@@ -569,7 +571,10 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->wait_on_lock = NULL; 
 	list_init(&t->donations);
 
-	// list_init(&t->child_list); // project 2 user program
+	list_init(&t->childs); // project 2 user program
+	sema_init(&t->fork_sema, 0); // fork_sema : 자식 프로세스 create 될 때까지 기다림
+	sema_init(&t->wait_sema, 0); // wait_sema : 자식 프로세스 종료할 때 까지 기다림
+	sema_init(&t->free_sema, 0); // free_sema : 자식 프로세스 free될 때 까지 기다림
 
 	// mlfqs 추가
 	t->nice = NICE_DEFAULT;

@@ -18,6 +18,7 @@
 #include "threads/mmu.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "threads/synch.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -80,8 +81,19 @@ initd (void *f_name) {
 tid_t
 process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	/* Clone current thread to new thread.*/
-	return thread_create (name,
-			PRI_DEFAULT, __do_fork, thread_current ());
+	struct thread *parent_thread = thread_current();
+	memcpy(&parent_thread->parent_if, if_, sizeof(struct intr_frame)); // kernel stack에 있는 intr_frame을 부모 스레드의 intr_frame에 복사
+
+	tid_t new_tid = thread_create (name, PRI_DEFAULT, __do_fork, parent_thread); // 새로운 스레드 생성
+
+
+	if (new_tid == TID_ERROR) {
+		return TID_ERROR;
+	}
+
+	struct thread *child_thread = get_child_process(new_tid);
+	sema_down(&child_thread->fork_sema);
+	return child_thread->tid;
 }
 
 #ifndef VM
@@ -96,21 +108,34 @@ duplicate_pte (uint64_t *pte, void *va, void *aux) {
 	bool writable;
 
 	/* 1. TODO: If the parent_page is kernel page, then return immediately. */
+	if (is_kernel_vaddr(parent_page)) {
+		return true;
+	}
 
 	/* 2. Resolve VA from the parent's page map level 4. */
 	parent_page = pml4_get_page (parent->pml4, va);
+	if(parent_page == NULL) {
+		return false;
+	}
 
 	/* 3. TODO: Allocate new PAL_USER page for the child and set result to
 	 *    TODO: NEWPAGE. */
+	newpage = palloc_get_page(PAL_USER | PAL_ZERO);
+	if(newpage == NULL) {
+		return false;
+	}
 
 	/* 4. TODO: Duplicate parent's page to the new page and
 	 *    TODO: check whether parent's page is writable or not (set WRITABLE
 	 *    TODO: according to the result). */
+	memcpy(newpage, parent_page, PGSIZE);
+	writable = is_writable(pte);
 
 	/* 5. Add new page to child's page table at address VA with WRITABLE
 	 *    permission. */
 	if (!pml4_set_page (current->pml4, va, newpage, writable)) {
 		/* 6. TODO: if fail to insert page, do error handling. */
+		return false;
 	}
 	return true;
 }
@@ -126,7 +151,7 @@ __do_fork (void *aux) {
 	struct thread *parent = (struct thread *) aux;
 	struct thread *current = thread_current ();
 	/* TODO: somehow pass the parent_if. (i.e. process_fork()'s if_) */
-	struct intr_frame *parent_if;
+	struct intr_frame *parent_if = &parent->parent_if;
 	bool succ = true;
 
 	/* 1. Read the cpu context to local stack. */
@@ -153,13 +178,29 @@ __do_fork (void *aux) {
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
 
+	current->fd_table[0] = parent->fd_table[0];
+	current->fd_table[1] = parent->fd_table[1];
+	for(int i = 2; i < FDCOUNT_LIMIT; i++) {
+		struct file *fd = parent->fd_table[i];
+		if (fd == NULL) {
+			continue;
+		}
+		current->fd_table[i] = file_duplicate(fd);
+	}
+	current->fd = parent->fd;
+	sema_up(&current->fork_sema);
+	if_.R.rax = 0;
 	process_init ();
 
 	/* Finally, switch to the newly created process. */
-	if (succ)
+	if (succ) {
 		do_iret (&if_);
+	}
 error:
-	thread_exit ();
+	current->exit_status = TID_ERROR;
+	sema_up(&current->fork_sema);
+	exit(TID_ERROR);
+	//thread_exit ();
 }
 
 /* Switch the current execution context to the f_name.
@@ -210,8 +251,20 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	thread_set_priority(thread_get_priority()-1);
-	return -1;
+	struct thread* parent_thread = thread_current();
+	struct thread* child_thread = get_child_process(child_tid);
+	int exit_status = child_thread->exit_status;
+	if (child_thread == NULL) {
+		return -1;
+	}
+	printf("============process_wait진입==============\n");
+	sema_down(&child_thread->wait_sema);
+	printf("============sema_down끝==============\n");
+	list_remove(&child_thread->child_elem);
+	sema_up(&child_thread->free_sema);
+	printf("============sema_up끝==============\n");
+
+	return exit_status;
 }
 
 /* Exit the process. This function is called by thread_exit (). */
@@ -227,6 +280,12 @@ process_exit (void) {
 	// while (i != 2){
 	// 	filesys_remove(fd);
 	// }
+	// int fd = curr->fd;
+	// for (fd = 2; fd < FDCOUNT_LIMIT; fd++) {
+	// 		file_close(curr->fd_table[fd]);
+	// }
+	// palloc_free_page(*curr->fd_table);
+
 	/* 프로세스에 열린 모든 파일을 닫음 */
 	/* 파일 디스크립터 테이블의 최대값을 이용해 파일 디스크립터
 	의 최소값인 2가 될 때까지 파일을 닫음 */
@@ -699,12 +758,22 @@ setup_stack (struct intr_frame *if_) {
 
 // project 2 user program
 struct thread *get_child_process(int pid){
-
+	struct thread* cur_thread = thread_current();
+	struct list_elem *find_child;
+	if(!list_empty(&cur_thread->childs)) {
+		for (find_child = list_begin(&cur_thread->childs); find_child != list_tail(&cur_thread->childs); find_child = list_next(find_child)) {
+			struct thread *child_thread = list_entry(find_child, struct thread, child_elem);
+			if (pid == child_thread->tid) {
+				return child_thread;
+			}
+		}
+	}
+	return NULL;
 }
 
-void remove_child_process(struct thread *cp){
+// void remove_child_process(struct thread *cp){
 
-}
+// }
 
 int process_add_file(struct file *f){ 
 	struct thread* cur_thread = thread_current(); //현재 스레드
