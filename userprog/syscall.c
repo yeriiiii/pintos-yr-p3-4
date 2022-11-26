@@ -118,6 +118,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 			close(f->R.rdi);
 			break;	
 		default:
+			// exit(-1);
 			break;
 	}
 
@@ -170,7 +171,7 @@ int open (const char *file){
 	}	
 	int open_file_fd = process_add_file(open_file); // 오픈 파일 파일 디스크립터 테이블에 추가
 	if (open_file_fd == -1){			//실패시
-		close(open_file_fd);	 // 파일 닫기
+		file_close(open_file_fd);	 // 파일 닫기
 	} 
 	return open_file_fd;	 // 성공시 fd값 리턴
 	// 파일을 열 때 사용하는 시스템 콜

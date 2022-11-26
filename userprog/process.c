@@ -59,6 +59,15 @@ process_create_initd (const char *file_name) {
 	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
+	// multi-oom 강제 종료된 child list가 있는지 검사하여 있다면 process_wait으로 실패한 프로세스를 회수하자
+	struct list_elem *e;
+	struct thread *t;
+	for (e=list_begin(&thread_current()->childs); e != list_end(&thread_current()->childs); e=list_next(e)){
+		t=list_entry(e, struct thread, child_elem);
+		if (t->exit_status == -1){
+			return process_wait(tid);
+		}
+	}
 	return tid;
 }
 
@@ -174,7 +183,9 @@ __do_fork (void *aux) {
 	if (!pml4_for_each (parent->pml4, duplicate_pte, parent))
 		goto error;
 #endif
-
+	// multi -oom
+	if(parent->fd == FDCOUNT_LIMIT)
+		goto error;
 	/* TODO: Your code goes here.
 	 * TODO: Hint) To duplicate the file object, use `file_duplicate`
 	 * TODO:       in include/filesys/file.h. Note that parent should not return
@@ -233,7 +244,7 @@ process_exec (void *f_name) {
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
 	if (!success)
-		return -1;
+		return -1; 
 
 	/* Start switched process. */
 	do_iret (&_if);
@@ -259,10 +270,10 @@ process_wait (tid_t child_tid UNUSED) {
 	if (child_thread == NULL) {
 		return -1;
 	}
-	sema_down(&child_thread->wait_sema);
+	sema_down(&child_thread->wait_sema); 
 	int exit_status = child_thread->exit_status;
-	list_remove(&child_thread->child_elem);
-	sema_up(&child_thread->free_sema);
+	list_remove(&child_thread->child_elem); 
+	sema_up(&child_thread->free_sema);  
 	return exit_status;
 }
 
@@ -274,10 +285,22 @@ process_exit (void) {
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
+
+	// close all open files 
+	// for (int i = 0; i<FDCOUNT_LIMIT; i++){
+	// 	close(i);
+	// }
+
+	palloc_free_multiple(curr->fd_table,FDT_PAGES);
+	
 	file_close(curr->running);
-	sema_up(&curr->wait_sema);
-	sema_down(&curr->free_sema);
-	process_cleanup();
+
+	sema_up(&curr->wait_sema); 
+
+	sema_down(&curr->free_sema); 
+	
+	process_cleanup();		
+
 }
 
 /* Free the current process's resources. */
@@ -495,7 +518,7 @@ load (const char *file_name, struct intr_frame *if_) {
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	// file_close (file);
+	// file_close (file); // deny_write_on 유지 위해 process exit 에서 해줌
 	return success;
 
 }
