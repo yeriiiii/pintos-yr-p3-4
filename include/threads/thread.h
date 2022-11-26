@@ -125,7 +125,7 @@ struct thread {
 	int fd;
 	struct file **fd_table;
 	struct intr_frame parent_if;
-
+	struct file *running;
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */

@@ -274,6 +274,7 @@ process_exit (void) {
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
+	file_close(curr->running);
 	sema_up(&curr->wait_sema);
 	sema_down(&curr->free_sema);
 	process_cleanup();
@@ -408,6 +409,9 @@ load (const char *file_name, struct intr_frame *if_) {
 		goto done;
 	}
 
+	t->running = file;
+	file_deny_write(file);
+
 	/* Read and verify executable header. */
 	if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
 			|| memcmp (ehdr.e_ident, "\177ELF\2\1\1", 7)
@@ -491,9 +495,11 @@ load (const char *file_name, struct intr_frame *if_) {
 
 done:
 	/* We arrive here whether the load is successful or not. */
-	file_close (file);
+	// file_close (file);
 	return success;
+
 }
+
 
 void argument_stack(char **token, int count, void **rsp) {
 	int i, j;
