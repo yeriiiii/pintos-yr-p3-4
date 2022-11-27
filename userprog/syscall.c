@@ -11,8 +11,9 @@
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 #include "lib/kernel/console.h"
-#include "include/threads/palloc.h"
 #include "lib/string.h"
+#include "threads/palloc.h"
+#include "threads/synch.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -118,7 +119,7 @@ syscall_handler (struct intr_frame *f UNUSED) {
 			close(f->R.rdi);
 			break;	
 		default:
-			// exit(-1);
+			exit(-1);
 			break;
 	}
 
@@ -180,6 +181,9 @@ int open (const char *file){
 };
 
 int filesize(int fd){
+	if(fd < 0 || fd >= FDCOUNT_LIMIT){
+		return -1;
+	}
 	struct file *cur_file = process_get_file(fd); // 해당 파일 을 가져온다.
 	if (cur_file == NULL){ // 파일 유효 확인
 		return -1;
@@ -298,6 +302,7 @@ int exec (const char *cmd_line){
 	if (process_exec(fn_copy) == -1) {
 		return -1;
 	}
+	NOT_REACHED();
 	return 0;
 }
 

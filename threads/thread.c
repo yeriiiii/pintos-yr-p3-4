@@ -571,11 +571,6 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->wait_on_lock = NULL; 
 	list_init(&t->donations);
 
-	list_init(&t->childs); // project 2 user program
-	sema_init(&t->fork_sema, 0); // fork_sema : 자식 프로세스 create 될 때까지 기다림
-	sema_init(&t->wait_sema, 0); // wait_sema : 자식 프로세스 종료할 때 까지 기다림
-	sema_init(&t->free_sema, 0); // free_sema : 자식 프로세스 free될 때 까지 기다림
-
 	// mlfqs 추가
 	t->nice = NICE_DEFAULT;
 	t->recent_cpu = RECENT_CPU_DEFAULT;
@@ -583,6 +578,10 @@ init_thread (struct thread *t, const char *name, int priority) {
 
 	//project 2
 	t->exit_status = 0;
+	list_init(&t->childs); // project 2 user program
+	sema_init(&t->fork_sema, 0); // fork_sema : 자식 프로세스 create 될 때까지 기다림
+	sema_init(&t->wait_sema, 0); // wait_sema : 자식 프로세스 종료할 때 까지 기다림
+	sema_init(&t->free_sema, 0); // free_sema : 자식 프로세스 free될 때 까지 기다림
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
