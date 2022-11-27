@@ -24,13 +24,13 @@ void exit (int status);
 bool create (const char *file, unsigned initial_size);
 bool remove (const char *file);
 
-int open (const char *file);
-int filesize (int fd);
-int read (int fd, void *buffer, unsigned size);
-int write (int fd, const void *buffer, unsigned size);
-void seek (int fd, unsigned position);
-unsigned tell (int fd);
-void close (int fd);
+int open (const char *file); // 파일을 열때
+int filesize (int fd); // 파일의 크기를 알려준다.
+int read (int fd, void *buffer, unsigned size); // 열린 파일의 데이터를 읽음
+int write (int fd, const void *buffer, unsigned size); // 열린 파일의 데이터를 기록
+void seek (int fd, unsigned position); // 열린파일의 위치(offset)를 이동
+unsigned tell (int fd); // 열린 파일의 위치(offset)을 알려줌
+void close (int fd); // 열린 파일을 닫음
 
 int fork (const char *thread_name, struct intr_frame *f);
 int exec (const char *cmd_line);
@@ -67,10 +67,6 @@ syscall_init (void) {
 void
 syscall_handler (struct intr_frame *f UNUSED) {
 // TODO: Your implementation goes here.
-	// f->rsp;
-	// f->R.rax;
-	// check_address(f->rsp);
-	// check_address(f->R.rax);
 	
 	int syscall_number = f->R.rax;
 	switch (syscall_number){

@@ -298,7 +298,7 @@ process_exit (void) {
 
 	sema_up(&curr->wait_sema); // 종료되었다고 기다리고 있는 부모 thread에게 signal 보냄-> sema_up에서 val을 올려줌
 
-	sema_down(&curr->free_sema); // 부모의 exit_Status가 정확히 전달되었는지 확인(wait)
+	sema_down(&curr->free_sema); // 부모에게 exit_Status가 정확히 전달되었는지 확인(wait)
 	
 	process_cleanup();	// pml4를 날림(이 함수를 call 한 thread의 pml4)
 
