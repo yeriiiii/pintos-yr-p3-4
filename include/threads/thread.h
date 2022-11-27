@@ -27,12 +27,13 @@ typedef int tid_t;
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
-#define PRI_MAX 63                      /* Highest priority. */
+#define PRI_MAX 63                     
+ /* Highest priority. */
 
 //project 2 file
-#define FDCOUNT_LIMIT 128
+
 #define FDT_PAGES 3
-#define FDT_COUNT_LIMIT FDT_PAGES *(1<<9) // limit fd
+#define FDCOUNT_LIMIT FDT_PAGES *(1<<9) // limit fd
 
 /* A kernel thread or user process.
  *
