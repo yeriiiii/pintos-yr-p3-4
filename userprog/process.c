@@ -794,36 +794,21 @@ struct thread *get_child_process(int pid){
 // }
 
 int process_add_file(struct file *f){ 
-	struct thread *cur = thread_current();
-	struct file **fdt = cur->fd_table;
-
-	/* fd의 위치가 제한 범위를 넘지 않고, fd_table의 인덱스 위치와 일치한다면 */
-	// cur->fd_idx 가 어디있지? -> thread.h의 thread 구조체 안에 fd_table과 함께 선언해준다.
-	// 제한범위를 나타낼 FDCOUNT_LIMIT 등도 thread.h 파일 내에 선언(#define)해준다.
-	while (cur->fd < FDCOUNT_LIMIT && fdt[cur->fd]) {
-		cur->fd++;
-	}
-
-	// fdt가 가득 찼다면
-	if (cur->fd >= FDCOUNT_LIMIT)
-		return -1;
-	
-	fdt[cur->fd] = f;
-	return cur->fd;
-	// struct thread* cur_thread = thread_current(); //현재 스레드
-	// struct file **fd_table = cur_thread->fd_table; // 현재 스레드의 파일 디스크립터 테이블
+	struct thread* cur_thread = thread_current(); //현재 스레드
+	struct file **fd_table = cur_thread->fd_table; // 현재 스레드의 파일 디스크립터 테이블
 	// int fd = cur_thread->fd; // 현재 스레드의 파일 디스크립터
 
-	// while (cur_thread->fd_table[fd] && fd <FDCOUNT_LIMIT){ // fdt에 빈 자리가 날 때까지 fd 값을 계속 1씩 올린다. 그래서 자리가 나면 해당 자리에 파일을 배치하고 해당 디스크립터 값(=fdt의 인덱스)를 반환한다.
-	// 	fd++;
-	// }
+	while (cur_thread->fd_table[cur_thread->fd] && cur_thread->fd <FDCOUNT_LIMIT){ // fdt에 빈 자리가 날 때까지 fd 값을 계속 1씩 올린다. 그래서 자리가 나면 해당 자리에 파일을 배치하고 해당 디스크립터 값(=fdt의 인덱스)를 반환한다.
+		cur_thread->fd++;
+	}
 
-	// if (fd >= FDCOUNT_LIMIT){  // 오류시 리턴 -1 
-	// 	return -1;
-	// }
-	// cur_thread->fd = fd; // 새 식별자 
-	// fd_table[fd] = f; // 새식별자가 파일을 가리키도록 설정
-	// return fd; // 파일 디스크립터 리턴
+	if (cur_thread->fd >= FDCOUNT_LIMIT){  // 오류시 리턴 -1 
+		return -1;
+	}
+
+	// cur_thread->fd = fd; // 새 식별자
+	fd_table[cur_thread->fd] = f; // 새식별자가 파일을 가리키도록 설정
+	return cur_thread->fd; // 파일 디스크립터 리턴
 	/* 파일 객체를 파일 디스크립터 테이블에 추가 */
 	/* 파일 디스크립터의 최대값 1 증가 */
 	/* 파일 디스크립터 리턴 */

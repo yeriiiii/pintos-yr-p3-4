@@ -166,6 +166,7 @@ remove (const char *file) {
 
 int open (const char *file){
 	check_address(file); // 파일 유효 주소 확인
+	lock_acquire(&filesys_lock);
 	struct file *open_file = filesys_open(file); // 파일 오픈 및 파일 명 지정
 	if (open_file == NULL){ // 오픈 파일 명 값 확인
 		return -1;
@@ -174,6 +175,7 @@ int open (const char *file){
 	if (open_file_fd == -1){			//실패시
 		file_close(open_file);	 // 파일 닫기
 	} 
+	lock_release(&filesys_lock);
 	return open_file_fd;	 // 성공시 fd값 리턴
 	// 파일을 열 때 사용하는 시스템 콜
 	// 성공 시 fd를 생성하고 반환, 실패 시 -1 반환
