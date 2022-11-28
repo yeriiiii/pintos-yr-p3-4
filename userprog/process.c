@@ -298,7 +298,7 @@ process_exit (void) {
 
 	sema_up(&curr->wait_sema); // 종료되었다고 기다리고 있는 부모 thread에게 signal 보냄-> sema_up에서 val을 올려줌
 
-	sema_down(&curr->free_sema); // 부모의 exit_Status가 정확히 전달되었는지 확인(wait)
+	sema_down(&curr->free_sema); // 부모에게 exit_Status가 정확히 전달되었는지 확인(wait)
 	
 	process_cleanup();	// pml4를 날림(이 함수를 call 한 thread의 pml4)
 
@@ -558,7 +558,6 @@ void argument_stack(char **token, int count, void **rsp) {
 		**(char **)rsp = 0;
 	}
 }
-//test
 
 /* Checks whether PHDR describes a valid, loadable segment in
  * FILE and returns true if so, false otherwise. */
@@ -789,9 +788,6 @@ struct thread *get_child_process(int pid){
 	return NULL;
 }
 
-// void remove_child_process(struct thread *cp){
-
-// }
 
 int process_add_file(struct file *f){ 
 	struct thread* cur_thread = thread_current(); //현재 스레드
@@ -827,16 +823,3 @@ struct file *process_get_file(int fd)
 	/* 파일 디스크립터에 해당하는 파일 객체를 리턴 */
 	/* 없을 시 NULL 리턴 */
 }
-
-// void process_close_file(int fd) {
-// 	struct thread* cur_thread = thread_current();
-// 	struct file *cur_file = process_get_file(fd); // 해당 하는 파일 얻어오기
-// 	if (cur_file == NULL){ // 해당 파일 유효 체크
-// 		return;
-// 	}
-// 	check_address(cur_file);
-// 	file_close(cur_file);
-// 	cur_thread->fd_table[fd] = NULL;
-// 	/* 파일 디스크립터에 해당하는 파일을 닫음 */
-// 	/* 파일 디스크립터 테이블 해당 엔트리 초기화 */
-// }
