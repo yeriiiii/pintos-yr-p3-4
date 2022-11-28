@@ -52,7 +52,7 @@ process_create_initd (const char *file_name) {
 		return TID_ERROR;
 	strlcpy (fn_copy, file_name, PGSIZE);
 
-	/* thread name parsing*/
+	/* Project 2 - user program : 스레드 이름 파싱 */
 	char *save_ptr, *token;
 	token = strtok_r(file_name, " ", &save_ptr);
 
@@ -60,15 +60,7 @@ process_create_initd (const char *file_name) {
 	tid = thread_create (file_name, PRI_DEFAULT, initd, fn_copy);
 	if (tid == TID_ERROR)
 		palloc_free_page (fn_copy);
-	// multi-oom 강제 종료된 child list가 있는지 검사하여 있다면 process_wait으로 실패한 프로세스를 회수하자
-	// struct list_elem *e;
-	// struct thread *t;
-	// for (e=list_begin(&thread_current()->childs); e != list_end(&thread_current()->childs); e=list_next(e)){
-	// 	t=list_entry(e, struct thread, child_elem);
-	// 	if (t->exit_status == -1){
-	// 		return process_wait(tid);
-	// 	}
-	// }
+
 	return tid;
 }
 
@@ -191,9 +183,6 @@ __do_fork (void *aux) {
 	 * TODO:       in include/filesys/file.h. Note that parent should not return
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
-
-	current->fd_table[0] = parent->fd_table[0];
-	current->fd_table[1] = parent->fd_table[1];
 	for(int i = 2; i < FDCOUNT_LIMIT; i++) {
 		struct file *fd = parent->fd_table[i];
 		if (fd == NULL) {
@@ -214,14 +203,13 @@ error:
 	current->exit_status = TID_ERROR;
 	sema_up(&current->fork_sema);
 	exit(TID_ERROR);
-	//thread_exit ();
 }
 
 /* Switch the current execution context to the f_name.
  * Returns -1 on fail. */
 int
 process_exec (void *f_name) {
-	char *file_name = f_name;
+	char *file_name = f_name; // void*로 넘겨받은 f_name을 문자열로 형 변환 
 	bool success;
 	int count = 0;
 
@@ -287,12 +275,7 @@ process_exit (void) {
 	 * TODO: project2/process_termination.html).
 	 * TODO: We recommend you to implement process resource cleanup here. */
 
-	// close all open files 
-	// for (int i = 0; i<FDCOUNT_LIMIT; i++){
-	// 	close(i);
-	// }
-
-	palloc_free_multiple(curr->fd_table,FDT_PAGES);
+	palloc_free_multiple(curr->fd_table, FDT_PAGES);
 	
 	file_close(curr->running); // load에서 file close -> process_exit할때 close file_deny_write
 
@@ -513,8 +496,7 @@ load (const char *file_name, struct intr_frame *if_) {
 	argument_stack(token, count, &if_->rsp);
 	if_->R.rdi = count;
 	if_->R.rsi = if_->rsp+8;
-	// printf("rsi = %p\n", if_->R.rsi);
-	// printf("rdi = %d\n", if_->R.rdi);
+	
 	success = true;
 
 done:
@@ -524,7 +506,7 @@ done:
 
 }
 
-
+/* Project 2 - User Program */
 void argument_stack(char **token, int count, void **rsp) {
 	int i, j;
 	char *ptr[128];
@@ -771,7 +753,7 @@ setup_stack (struct intr_frame *if_) {
 }
 #endif /* VM */
 
-// project 2 user program
+/* Project 2 - User Program */
 struct thread *get_child_process(int pid){
 	struct thread* cur_thread = thread_current();
 	struct list *child_list = &cur_thread->childs;
@@ -788,7 +770,7 @@ struct thread *get_child_process(int pid){
 	return NULL;
 }
 
-
+/* Project 2 - User Program */
 int process_add_file(struct file *f){ 
 	struct thread* cur_thread = thread_current(); //현재 스레드
 	struct file **fd_table = cur_thread->fd_table; // 현재 스레드의 파일 디스크립터 테이블
@@ -810,6 +792,7 @@ int process_add_file(struct file *f){
 	/* 파일 디스크립터 리턴 */
 }
 
+/* Project 2 - User Program */
 struct file *process_get_file(int fd)
 {	
 	if (fd < 0 || fd >= FDCOUNT_LIMIT){ // 파일 디스크립터 유효 검사

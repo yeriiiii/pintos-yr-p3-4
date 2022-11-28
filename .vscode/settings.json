@@ -4,6 +4,7 @@
         "intrinsic.h": "c",
         "*.inc": "c",
         "syscall.h": "c",
-        "synch.h": "c"
+        "synch.h": "c",
+        "main.h": "c"
     }
 }
