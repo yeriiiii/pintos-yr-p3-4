@@ -174,6 +174,80 @@ vm_do_claim_page (struct page *page) {
 /* Initialize new supplemental page table */
 void
 supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
+	hash_init(&spt->spt_hash, spt_hash_func, spt_less_func);
+}
+
+static unsigned spt_hash_func(const struct hash_elem *e, void *aux)
+{
+	struct page *p = hash_entry(e, struct page, elem);
+	return hash_int(p->va);
+}
+
+static bool spt_less_func(const struct hash_elem *a, const struct hash_elem *b)
+{
+	struct page *ap = hash_entry(a, struct page, elem);
+	struct page *bp = hash_entry(b, struct page, elem);
+
+	if (ap->va < bp->va)
+		return true;
+	else
+		return false;
+}
+
+struct page *spt_find_page(struct supplemental_page_table *spt, void *va){
+
+	struct page *temp;
+	temp->va = pg_round_down(va);
+	struct hash_elem *va_hash_elem = hash_find(&spt->spt_hash, &temp->elem);
+	if (va_hash_elem == NULL)
+		return NULL;
+	else
+		return hash_entry(va_hash_elem, struct page, elem);
+}
+
+bool spt_insert_page(struct supplemental_page_table *spt, struct page *page){
+
+	if (hash_insert(&spt->spt_hash, &page->elem)==NULL) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}
+
+static struct frame *vm_get_frame(void){
+	void *new_kva = palloc_get_page(PAL_USER); //유저 풀에서 새로운 물리 페이지를 가져온다
+	if (new_kva==NULL){
+		PANIC("todo"); //페이지 할당이 실패하면, 일단 패닉 -> 나중에 수정
+	}
+	else{
+		// 프레임 초기화
+		struct frame *new_frame; 
+		new_frame->kva = new_kva;
+		// 프레임에 매핑된 페이지 초기화
+		struct page *new_page;
+		new_page->frame = new_frame;
+		new_page->va = new_kva;
+		// [3-1?] 다른 멤버들 초기화 필요? (operations, union)
+		return new_frame;
+	}
+}
+
+
+bool vm_do_claim_page(struct page *page){
+	struct frame *f = vm_get_frame();
+
+	// uint64_t *pte = pml4e_walk(&thread_current()->pml4, (uint64_t)page, 0);
+	// if (pte==NULL)
+	// 	return false;
+	// else
+	// [3-1?] wr 세팅을 1로 하는게 맞나?
+	return pml4_set_page(&thread_current()->pml4, page, f, 1);
+}
+
+bool vm_claim_page(void *va){
+	struct page *p = spt_find_page(&thread_current()->spt, va);
+	return vm_do_claim_page(p);
 }
 
 /* Copy supplemental page table from src to dst */
