@@ -3,6 +3,7 @@
 #include "threads/malloc.h"
 #include "vm/vm.h"
 #include "vm/inspect.h"
+#include "vm/uninit.h"
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -53,9 +54,19 @@ vm_alloc_page_with_initializer (enum vm_type type, void *upage, bool writable,
 		/* TODO: Create the page, fetch the initialier according to the VM type,
 		 * TODO: and then create "uninit" page struct by calling uninit_new. You
 		 * TODO: should modify the field after calling the uninit_new. */
-
+		struct page *new_page = (struct page *)malloc(sizeof(struct page));
+		if (type == VM_ANON) uninit_new(new_page, upage, init, type, aux, anon_initializer); //[3-1?] ??
+		else if (type == VM_FILE)
+			uninit_new(new_page, upage, init, type, aux, file_backed_initializer);
+		else{
+			printf("유효하지 않은 페이지 타입\n");
+			goto err;
+		}
 		/* TODO: Insert the page into the spt. */
+		if (spt_insert_page(spt, new_page)==false)
+			goto err;
 	}
+	return true;
 err:
 	return false;
 }
@@ -70,12 +81,12 @@ spt_find_page (struct supplemental_page_table *spt, void *va) {
 	struct page *temp = palloc_get_page(PAL_USER);
 	temp->va = pg_round_down(va); 
 	// 가짜 페이지와 같은 hash를 가지는 페이지를 찾아옴
-	struct hash_elem *va_hash_elem = hash_find(&spt->spt_hash, &temp->elem);
+	struct hash_elem *va_hash_elem = hash_find(&spt->spt_hash, &temp->h_elem);
 	// 가짜 페이지 메모리 해제
 	palloc_free_page(temp);
 
 	if (va_hash_elem != NULL)
-		page = hash_entry(va_hash_elem, struct page, elem);
+		page = hash_entry(va_hash_elem, struct page, h_elem);
 
 	return page;
 }
@@ -98,7 +109,7 @@ spt_insert_page (struct supplemental_page_table *spt,
 		struct page *page) {
 	int succ = false;
 	/* TODO: Fill this function. */
-	if (hash_insert(&spt->spt_hash, &page->elem)==NULL){
+	if (hash_insert(&spt->spt_hash, &page->h_elem)==NULL){
 		succ = true;
 	}
 	return succ;
@@ -224,24 +235,21 @@ vm_do_claim_page (struct page *page) {
 /* Initialize new supplemental page table */
 void
 supplemental_page_table_init (struct supplemental_page_table *spt UNUSED) {
-	hash_init(&spt->spt_hash, spt_hash_func, spt_less_func);
+	hash_init(&spt->spt_hash, spt_hash_func, spt_less_func, NULL);
 }
 
-static unsigned spt_hash_func(const struct hash_elem *e, void *aux)
+static unsigned spt_hash_func(const struct hash_elem *e, void *aux UNUSED)
 {
-	struct page *p = hash_entry(e, struct page, elem);
-	return hash_int(p->va);
+	const struct page *p = hash_entry(e, struct page, h_elem);
+	return hash_bytes(&p->va, sizeof p->va);
 }
 
-static bool spt_less_func(const struct hash_elem *a, const struct hash_elem *b)
+static bool spt_less_func(const struct hash_elem *a, const struct hash_elem *b, void *aux UNUSED)
 {
-	struct page *ap = hash_entry(a, struct page, elem);
-	struct page *bp = hash_entry(b, struct page, elem);
+	const struct page *ap = hash_entry(a, struct page, h_elem);
+	const struct page *bp = hash_entry(b, struct page, h_elem);
 
-	if (ap->va < bp->va)
-		return true;
-	else
-		return false;
+	return ap->va < bp->va;
 }
 
 static struct frame *vm_get_frame(void){
@@ -251,7 +259,7 @@ static struct frame *vm_get_frame(void){
 	}
 	else{
 		// 프레임 초기화
-		struct frame *new_frame; // [3-1?] 프레임 할당은 어디서 해오지????!!@!!@!!@!!@!@
+	struct frame *new_frame = (struct frame *)malloc(sizeof(struct frame)); // [3-1?] 프레임 할당은 어디서 해오지????!!@!!@!!@!!@!@malloc을 하라
 		new_frame->kva = new_kva;
 		// 프레임에 매핑된 페이지 초기화
 		// struct page *new_page;
