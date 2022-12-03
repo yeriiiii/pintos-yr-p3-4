@@ -476,7 +476,7 @@ load (const char *file_name, struct intr_frame *if_) { // file_name = 'args-sing
         arg_list[idx]=token;
 		idx++;
     }
-	printf("----------load 시작: arg_list[0] %s---------\n", arg_list[0]);
+	// printf("----------load 시작: arg_list[0] %s---------\n", arg_list[0]);
 	memcpy(file_name,arg_list[0],strlen(arg_list[0])+1);
 
 	struct thread *t = thread_current ();
@@ -591,7 +591,7 @@ load (const char *file_name, struct intr_frame *if_) { // file_name = 'args-sing
 	/* Return Address는 Caller(함수를 호출하는 부분)의 다음 수행 명령어 주소를 의미한다. */
 	/* Callee(호출 받은 함수)의 리턴 값은 rax 레지스터에 저장된다. */
 
-	printf("----------argument_stack 진입전: arg_list[0] %s---------\n", arg_list[0]);
+	// printf("----------argument_stack 진입전: arg_list[0] %s---------\n", arg_list[0]);
 	argument_stack(arg_list,idx,if_);
 
 	/* TODO: Your code goes here.
@@ -657,21 +657,21 @@ void argument_stack(char **arg_list,int idx,struct intr_frame *if_){
 	int cnt=0;
 	int start_addr=if_->rsp;
 
-	printf("----------argument stack 시작 %d---------\n", idx);
+	// printf("----------argument stack 시작 %d---------\n", idx);
 
 	for (int i=idx-1; i>-1; i--){
 	
-		printf("----------포문 들어옴~ %d---------\n", i);
-		printf("----------arg_list[i]: %s---------\n", arg_list[i]);
+		// printf("----------포문 들어옴~ %d---------\n", i);
+		// printf("----------arg_list[i]: %s---------\n", arg_list[i]);
 		cnt+=strlen(arg_list[i])+1;
 		for (j=strlen(arg_list[i]); j>-1 ; j--)
 		{
-			printf("----------포포문 들어옴~ %d---------\n", j);
+			// printf("----------포포문 들어옴~ %d---------\n", j);
 			if_->rsp=if_->rsp-1;
-			printf("---------rsp: %p-----------\n", if_->rsp);
-			printf("----------멤셋 전, arg_list[i][j]: %s---------\n", arg_list[i][j]);
+			// printf("---------rsp: %p-----------\n", if_->rsp);
+			// printf("----------멤셋 전, arg_list[i][j]: %s---------\n", arg_list[i][j]);
 			memset(if_->rsp, arg_list[i][j], sizeof(char));
-			printf("----------memset:1---------\n");
+			// printf("----------memset:1---------\n");
 		}
 
 		if (i==0){
@@ -682,7 +682,7 @@ void argument_stack(char **arg_list,int idx,struct intr_frame *if_){
 		{
 			if_->rsp=if_->rsp-1;
 			memset(if_->rsp, 0, sizeof(char));
-			printf("----------memset:2---------\n");
+			// printf("----------memset:2---------\n");
 		}
 
 		for (i=idx; i>-1; i--)
@@ -691,22 +691,22 @@ void argument_stack(char **arg_list,int idx,struct intr_frame *if_){
 
 			if (i==idx){
 				memset(if_->rsp, 0, sizeof(char *));
-				printf("----------memset:3 - %d---------\n", i);
+				// printf("----------memset:3 - %d---------\n", i);
 			}
 			else {
 				start_addr=start_addr-strlen(arg_list[i])-1;
 				memcpy(if_->rsp, &start_addr, sizeof(start_addr));
-				printf("----------memcpy:3 - %d---------\n", i);
+				// printf("----------memcpy:3 - %d---------\n", i);
 			}
 		}
 		if_->rsp = if_->rsp-8;
 		memset(if_->rsp, 0, sizeof(void *));
-		printf("----------memset:4---------\n");
+		// printf("----------memset:4---------\n");
 		if_->R.rdi=idx;
 		if_->R.rsi=if_->rsp + 8; 
 		}
 	}
-	printf("----------argument stack 완료!---------\n");
+	// printf("----------argument stack 완료!---------\n");
 }
 
 /* Checks whether PHDR describes a valid, loadable segment in
@@ -913,28 +913,28 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
 
-		printf("----------로드세그먼트 시작---------\n");
+		// printf("----------로드세그먼트 시작---------\n");
 		struct file_info *aux_file_info;
 		aux_file_info = (struct file_info *)malloc(sizeof(struct file_info));
 		aux_file_info->file = file;
 		aux_file_info->offset = ofs;
 		aux_file_info->read_bytes = read_bytes;
 		aux_file_info->zero_bytes = zero_bytes;
-		printf("----------aux 세팅---------\n");
+		// printf("----------aux 세팅---------\n");
 
 		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
 					writable, lazy_load_segment, (void *)aux_file_info))
 		{
-			printf("----------vm_alloc_page_with_initializer : False---------\n");
+			// printf("----------vm_alloc_page_with_initializer : False---------\n");
 			return false;
 		}
 
 		/* Advance. */
-		printf("----------advance---------\n");
+		// printf("----------advance---------\n");
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;
 		upage += PGSIZE;
-		printf("----------로드 세그먼트 완료!---------\n");
+		// printf("----------로드 세그먼트 완료!---------\n");
 	}
 	return true;
 }
@@ -949,19 +949,22 @@ setup_stack (struct intr_frame *if_) {
 	 * TODO: If success, set the rsp accordingly.
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
-	printf("----------setup_stack 시작---------\n");
-	printf("-----va(setup_stack): %p ----------\n", stack_bottom);
+	// printf("----------setup_stack 시작---------\n");
+	// printf("-----va(setup_stack): %p ----------\n", stack_bottom);
 
 	if (vm_alloc_page(VM_ANON, stack_bottom, 1))
 	{
-		printf("----------스택 얼록 완료!---------\n");
+		// printf("----------스택 얼록 완료!---------\n");
 		if (vm_claim_page(stack_bottom)!=NULL){
-			printf("----------스택 프래임 할당 완료!---------\n");
+			// printf("----------스택 프래임 할당 완료!---------\n");
+			// printf("--------setupstack tid: %d---------\n", thread_current()->tid);
 			if_->rsp = USER_STACK;
+			// printf("----------rsp를 USER_STACK으로 지정 ---------\n");
 			success = true;
+			// printf("----------success=true ---------\n");
 		}
 	}
-	printf("----------setup_stack 끝: %s---------\n", success);
+	// printf("----------setup_stack 끝: ---------\n");
 	return success;
 }
 
