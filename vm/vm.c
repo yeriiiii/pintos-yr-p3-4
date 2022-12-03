@@ -242,17 +242,17 @@ vm_try_handle_fault (struct intr_frame *f UNUSED, void *addr UNUSED,
 	/* TODO: Your code goes here */
 
 	printf("[vm_try_handle_fault] addr: %p\n", addr);
-	printf("[vm_try_handle_fault] user: %d\n", user);
-	printf("[vm_try_handle_fault] write: %d\n", write);
-	printf("[vm_try_handle_fault] not_present: %d\n", not_present);
-	printf("[vm_try_handle_fault] tid: %d\n", thread_current()->tid);
+	//printf("[vm_try_handle_fault] user: %d\n", user);
+	//printf("[vm_try_handle_fault] write: %d\n", write);
+	//printf("[vm_try_handle_fault] not_present: %d\n", not_present);
+	//printf("[vm_try_handle_fault] tid: %d\n", thread_current()->tid);
 
 	if (not_present || write || user)
 	{ //  유효하지 않은 접근일 때
 		// [3-2??] spt_find_page(spt, addr)가 null로 반환하는 경우도 생각해야할까?
 		page = spt_find_page(spt, addr);
 		// [3-2??] 해당 자원 해제?
-		printf("-----vm_try_handle_fault--------\n");
+		//printf("-----vm_try_handle_fault--------\n");
 		exit(-1);
 	}
 	/* lazy loading 으로 인한 page fault */
@@ -274,8 +274,9 @@ bool
 vm_claim_page (void *va UNUSED) {
 	struct page *page = NULL;
 	/* TODO: Fill this function */
-	// printf("-----va(vm_calim_page): %p ----------\n", va);
+	//printf("[vm_claim_page] va: %p ----------\n", va);
 	page = spt_find_page(&thread_current()->spt, va);
+	//printf("[vm_claim_page] page->va: %p ----------\n", page->va);
 	if (page==NULL){
 		// printf("page 못찾음~~\n");
 		return false;
@@ -287,26 +288,28 @@ vm_claim_page (void *va UNUSED) {
 bool
 vm_do_claim_page (struct page *page) {
 	struct frame *frame = vm_get_frame ();
+	int result = false;
 	// printf("----get_frame 완료: -----\n");
 
-
 	/* Set links */
-	// printf("----frame: %p-----\n", frame);
+	//printf("[vm_do_claim_page] frame kva: %p\n", frame->kva);
 	frame->page = page;
-	// printf("----page: %p-----\n", page);
+	//printf("[vm_do_claim_page] page va: %p\n", page->va);
 	page->frame = frame;
-	// printf("----set-link 완료: -----\n");
+	//printf("[vm_do_claim_page] set-link 완료\n");
 
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
 	// [3-1?] wr 세팅을 1로 하는게 맞나?
 	if (pml4_set_page(&thread_current()->pml4, page->va, frame->kva, 1)==NULL){
-		// printf("----set_page 실패! -----\n");
+		//printf("[vm_do_claim_page] set_page 실패! \n");
 		return false;
 	}
 
-	// printf("----set_page 성공-----\n");
+	//printf("[vm_do_claim_page] set_page 성공 \n");
 
-	return swap_in(page, frame->kva);
+	result = swap_in(page, frame->kva);
+	//printf("[vm_do_claim_page] swap_in - RESULT: %d \n", result);
+	return result;
 }
 
 // bool vm_do_claim_page(struct page *page){
