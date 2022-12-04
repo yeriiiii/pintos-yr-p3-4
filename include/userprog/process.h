@@ -15,4 +15,6 @@ struct file *process_get_file(int fd);
 // void process_close_file(int fd);
 struct thread *get_child_process(int pid);
 
+void argument_stack(char **argv, int argc, struct intr_frame *if_);
+
 #endif /* userprog/process.h */

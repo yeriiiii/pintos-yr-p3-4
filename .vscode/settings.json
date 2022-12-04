@@ -5,6 +5,7 @@
         "*.inc": "c",
         "syscall.h": "c",
         "synch.h": "c",
-        "main.h": "c"
+        "main.h": "c",
+        "init.h": "c"
     }
 }
