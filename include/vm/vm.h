@@ -71,15 +71,18 @@ struct frame
 	struct page *page;
 };
 
+
 /* The function table for page operations.
  * This is one way of implementing "interface" in C.
  * Put the table of "method" into the struct's member, and
  * call it whenever you needed. */
 struct page_operations
 {
+
 	bool (*swap_in)(struct page *, void *);
 	bool (*swap_out)(struct page *);
 	void (*destroy)(struct page *);
+
 	enum vm_type type;
 };
 
@@ -92,14 +95,17 @@ struct page_operations
 /* Representation of current process's memory space.
  * We don't want to force you to obey any specific design for this struct.
  * All designs up to you for this. */
+
 struct supplemental_page_table
 {
+
 	struct hash spt_hash;
 };
 
 /* typedef struct hash supplemental_page_table; */
 
 #include "threads/thread.h"
+
 void supplemental_page_table_init(struct supplemental_page_table *spt);
 bool supplemental_page_table_copy(struct supplemental_page_table *dst,
 								  struct supplemental_page_table *src);
@@ -132,3 +138,4 @@ bool vm_do_claim_page(struct page *page);
 static struct frame *vm_evict_frame(void);
 
 #endif /* VM_VM_H */
+

@@ -1,11 +1,22 @@
 {
     "files.associations": {
-        "stdio.h": "c",
-        "intrinsic.h": "c",
-        "*.inc": "c",
+        "*.html": "html",
         "syscall.h": "c",
+        "thread.h": "c",
+        "stdio.h": "c",
+        "mmu.h": "c",
+        "stdlib.h": "c",
+        "syscall-nr.h": "c",
+        "loader.h": "c",
+        "init.h": "c",
+        "*.inc": "c",
+        "process.h": "c",
+        "stdint.h": "c",
+        "interrupt.h": "c",
         "synch.h": "c",
-        "main.h": "c",
-        "init.h": "c"
+        "filesys.h": "c",
+        "pte.h": "c",
+        "stddef.h": "c",
+        "vaddr.h": "c"
     }
 }
