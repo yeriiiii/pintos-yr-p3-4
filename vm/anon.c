@@ -41,8 +41,8 @@ bool anon_initializer(struct page *page, enum vm_type type, void *kva)
 static bool
 anon_swap_in(struct page *page, void *kva)
 {
-	printf("[anon_swap_in] kva: %p\n", kva);
-	printf("[anon_swap_in] va: %p\n", page->va);
+	// printf("[anon_swap_in] kva: %p\n", kva);
+	// printf("[anon_swap_in] va: %p\n", page->va);
 	struct anon_page *anon_page = &page->anon;
 }
 
@@ -58,4 +58,5 @@ static void
 anon_destroy(struct page *page)
 {
 	struct anon_page *anon_page = &page->anon;
+	palloc_free_page(page->frame->kva);
 }
