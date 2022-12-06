@@ -248,6 +248,9 @@ bool vm_do_claim_page(struct page *page)
 {
 	struct frame *frame = vm_get_frame();
 	int result = false;
+	struct thread *t = thread_current();
+	// printf("===========vm_do_claim_page: start=============\n");
+	// printf("[vm_do_claim_page] tid: %d\n", thread_current()->tid);
 
 	/* Set links */
 	frame->page = page;
@@ -255,9 +258,12 @@ bool vm_do_claim_page(struct page *page)
 
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
 	// [3-1?] wr 세팅을 1로 하는게 맞나?
-	if (pml4_set_page(thread_current()->pml4, page->va, frame->kva, 1) == NULL){
+
+	if (!install_page(page->va, frame->kva, 1)){
 		return false;
 	}
+	// printf("[vm_do_claim_page] set_page 성공 \n");
+
 	result = swap_in(page, frame->kva);
 	return result;
 }
