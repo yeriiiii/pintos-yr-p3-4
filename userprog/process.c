@@ -96,6 +96,7 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	struct thread *parent_thread = thread_current();
 	memcpy(&parent_thread->parent_if, if_, sizeof(struct intr_frame)); // kernel stack에 있는 intr_frame을 부모 스레드의 intr_frame에 복사
 	// printf("----------process_fork : memcpy---------\n");
+	//hex_dump(if_->rsp, if_->rsp, USER_STACK - if_->rsp, true);
 	tid_t new_tid = thread_create (name, PRI_DEFAULT, __do_fork, parent_thread); // 새로운 스레드 생성
 	// printf("----------process_fork : thread_create---------\n");
 
@@ -176,7 +177,11 @@ __do_fork (void *aux) {
 
 	/* 1. Read the cpu context to local stack. */
 	memcpy (&if_, parent_if, sizeof (struct intr_frame));
-	//printf("---------do_fork : memcpy---------\n");
+
+	
+	//printf("parent rsp: %p\n", parent_if->rsp);
+	//printf("child rsp: %p\n", if_.rsp);
+	// printf("---------do_fork : memcpy---------\n");
 	/* 2. Duplicate PT */
 	current->pml4 = pml4_create();
 	if (current->pml4 == NULL)
@@ -190,6 +195,7 @@ __do_fork (void *aux) {
 		goto error;
 	}
 	//printf("---------do_fork : spt copy end---------\n");
+	//hex_dump(if_.rsp, if_.rsp, USER_STACK - if_.rsp, true);
 #else
 	if (!pml4_for_each (parent->pml4, duplicate_pte, parent))
 		goto error;
@@ -830,8 +836,8 @@ setup_stack (struct intr_frame *if_) {
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
 
-	printf("----------setup_stack 시작---------\n");
-	// printf("-----va(setup_stack): %p ----------\n", stack_bottom);
+	//printf("----------setup_stack 시작---------\n");
+	//printf("-----va(setup_stack): %p ----------\n", stack_bottom);
 		if (vm_alloc_page(VM_ANON, stack_bottom, 1))
 		{
 			// printf("----------스택 얼록 완료!---------\n");
@@ -849,7 +855,7 @@ setup_stack (struct intr_frame *if_) {
 	//printf("temp kva: %p\n", temp->frame->kva);
 	//printf("hi\n");
 	//printf("temp kva: %p\n", pml4_get_page(thread_current()->pml4, stack_bottom));
-	printf("----------setup_stack 끝: ---------\n");
+	//printf("----------setup_stack 끝: ---------\n");
 	return success;
 }
 #endif /* VM */

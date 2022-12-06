@@ -31,8 +31,10 @@ bool anon_initializer(struct page *page, enum vm_type type, void *kva)
 	//printf("[anon_initialize] kva: %p\n", kva);
 	//printf("[anon_initialize] va: %p\n", page->va);
 	page->operations = &anon_ops;
+	void *temp = &page->uninit.aux;
 
 	struct anon_page *anon_page = &page->anon;
+	anon_page->aux = temp;
 
 	return true;
 }
@@ -58,5 +60,6 @@ static void
 anon_destroy(struct page *page)
 {
 	struct anon_page *anon_page = &page->anon;
-	palloc_free_page(page->frame->kva);
+	free(page->frame);
+	free(page->anon.aux);
 }

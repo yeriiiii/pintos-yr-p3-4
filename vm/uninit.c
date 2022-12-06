@@ -75,6 +75,7 @@ uninit_destroy(struct page *page)
 
 	/* TODO: Fill this function.
 	 * TODO: If you don't have anything to do, just return. */
-	palloc_free_page(page->frame->kva);
+	free(page->frame);
+	free(page->uninit.aux); 
 	//[3-2] va 관련,,?
 }

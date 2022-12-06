@@ -253,13 +253,14 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
 
-	printf("VM_TRY_HANDLE_FAULT: %p\n", addr);
+	//printf("VM_TRY_HANDLE_FAULT: %p\n", addr);
 	//printf("[vm_try_handle_fault] user: %d\n", user);
 	//printf("[vm_try_handle_fault] write: %d\n", write);
 	//printf("[vm_try_handle_fault] not_present: %d\n", not_present);
-	printf("[vm_try_handle_fault] tid: %d\n", thread_current()->tid);
+	//printf("[vm_try_handle_fault] tid: %d\n", thread_current()->tid);
 	// printf("[1]\n");
 
+	check_address(addr);
 
 	// if (not_present || write || user)
 	// { //  유효하지 않은 접근일 때
@@ -374,6 +375,27 @@ uninit page를 할당하고 즉시 claim 해야함 */
 /* Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED)
 {
+	struct hash_iterator i;
+	hash_first(&i, &src->spt_hash);
+	while (hash_next (&i)){
+		struct page *p = hash_entry(hash_cur(&i), struct page, h_elem);
+		if (p->operations->type == VM_UNINIT)
+		{
+			vm_alloc_page_with_initializer(p->uninit.type, p->va, 1, lazy_load_segment, NULL);
+			vm_claim_page(p->va);
+		}
+		else
+		{
+			vm_alloc_page(p->operations->type, p->va, 1);
+			struct page *child_p = spt_find_page(&thread_current()->spt, p->va);
+
+			vm_claim_page(p->va);
+			memcpy(child_p->frame->kva, p->frame->kva, PGSIZE);
+		}
+	}
+
+	// //hex
+
 	hash_apply(&src->spt_hash, supplemental_copy_entry);
 
 	return true;
@@ -389,11 +411,11 @@ void supplemental_copy_entry(struct hash_elem *e, void *aux){
 		vm_claim_page(p->va);
 
 		struct page *child_p = spt_find_page(&thread_current()->spt, p->va);
-		printf("[spt entry] p kva: %p\n", p->frame->kva);
-		printf("[spt entry] p va: %p\n", p->frame->page->va);
-		printf("[spt entry] child_p kva: %p\n", child_p->frame->kva);
-		printf("[spt entry] child_p va: %p\n", child_p->frame->page->va);
-		printf("child_p page: %p\n", pml4_get_page(thread_current()->pml4, p->va));
+		//printf("[spt entry] p kva: %p\n", p->frame->kva);
+		//printf("[spt entry] p va: %p\n", p->frame->page->va);
+		//printf("[spt entry] child_p kva: %p\n", child_p->frame->kva);
+		//printf("[spt entry] child_p va: %p\n", child_p->frame->page->va);
+		//printf("child_p page: %p\n", pml4_get_page(thread_current()->pml4, p->va));
 	}
 	else{
 		//printf("---------spt_entry: VM_ANON---------\n");
@@ -407,7 +429,7 @@ void supplemental_copy_entry(struct hash_elem *e, void *aux){
 		// printf("[spt entry] child_p va: %p\n", child_p->frame->page->va);
 		memcpy(child_p->frame->kva, p->frame->kva, PGSIZE);
 		//printf("parent_p content: %s\n", p->frame->kva);
-		// printf("child_p page: %p\n", pml4_get_page(thread_current()->pml4, p->va));
+		//printf("child_p page: %p\n", pml4_get_page(thread_current()->pml4, p->va));
 	}
 	
 }
@@ -418,7 +440,7 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED)
 {
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
 	 * TODO: writeback all the modified contents to the storage. */
-	hash_apply(&spt->spt_hash, supplemental_destroy_entry);
+	//hash_destroy(&spt->spt_hash, supplemental_destroy_entry);
 }
 
 void supplemental_destroy_entry(struct hash_elem *e, void *aux)
