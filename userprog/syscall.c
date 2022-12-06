@@ -120,12 +120,11 @@ syscall_handler (struct intr_frame *f UNUSED) {
 	}
 
 // 시스템 콜의 함수의 리턴 값은 인터럽트 프레임의 eax에 저장
-	// printf ("system call!\n");
 	// thread_exit ();
 }
 
 void check_address(void *addr) {
-	if((!is_user_vaddr(addr)) || (spt_find_page(&thread_current()->spt, addr)) == NULL||(addr == NULL)){	
+	if((!is_user_vaddr(addr)) || spt_find_page(&thread_current()->spt, addr) == NULL || (addr == NULL)){	
 		exit(-1);
 	}
 
@@ -211,7 +210,6 @@ int read (int fd, void *buffer, unsigned size){
 			key_length++;
 		}
 	}
-	
 	else if (fd == 1){ // STDOUT 이면 
 		return -1; // 오류 리턴
 	}

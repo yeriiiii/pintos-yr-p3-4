@@ -47,20 +47,13 @@ uninit_initialize(struct page *page, void *kva)
 {
 	struct uninit_page *uninit = &page->uninit;
 
-	// printf("==========uninit_swap_in: start============\n");
-
-	// printf("[uninit_swap_in] kva: %p\n", kva);
-	// printf("[uninit_swap_in] va : %p\n", page->va);
-
 	/* Fetch first, page_initialize may overwrite the values */
 	vm_initializer *init = uninit->init;
 	void *aux = uninit->aux;
 	
 	/* TODO: You may need to fix this function. */
 	bool page_initialize_r = uninit->page_initializer(page, uninit->type, kva);
-	//printf("uninit_swap_in: page_initialize success\n");
 	bool init_r = (init ? init(page, aux) : true);
-	// printf("===========uninit_swap_in: end=============\n");
 	return page_initialize_r && init_r;
 }
 
@@ -75,7 +68,5 @@ uninit_destroy(struct page *page)
 
 	/* TODO: Fill this function.
 	 * TODO: If you don't have anything to do, just return. */
-	free(page->frame);
-	free(page->uninit.aux); 
 	//[3-2] va 관련,,?
 }

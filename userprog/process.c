@@ -195,7 +195,7 @@ __do_fork (void *aux) {
 		goto error;
 	}
 	//printf("---------do_fork : spt copy end---------\n");
-	//hex_dump(if_.rsp, if_.rsp, USER_STACK - if_.rsp, true);
+	// hex_dump(if_.rsp, if_.rsp, USER_STACK - if_.rsp, true);
 #else
 	if (!pml4_for_each (parent->pml4, duplicate_pte, parent))
 		goto error;
@@ -247,17 +247,17 @@ process_exec (void *f_name) {
 	_if.ds = _if.es = _if.ss = SEL_UDSEG;
 	_if.cs = SEL_UCSEG;
 	_if.eflags = FLAG_IF | FLAG_MBS;
-
 	/* We first kill the current context */
 	process_cleanup ();
-
+	supplemental_page_table_init(&thread_current()->spt);
 	/* And then load the binary */
+	// printf("==========load 시작전 : %d==========\n",thread_current()->tid);
 	success = load (file_name, &_if);
-
-	//hex_dump(_if.rsp,_if.rsp, USER_STACK - _if.rsp,true);
+	// hex_dump(_if.rsp,_if.rsp, USER_STACK - _if.rsp,true);
 
 	/* If load failed, quit. */
 	palloc_free_page (file_name);
+
 	if (!success)
 		return -1; 
 
@@ -446,6 +446,7 @@ load(const char *file_name, struct intr_frame *if_)
 	t->pml4 = pml4_create();
 	if (t->pml4 == NULL)
 		goto done;
+
 	process_activate(t);
 
 	/* 락 획득 */
@@ -465,6 +466,7 @@ load(const char *file_name, struct intr_frame *if_)
 	t->running = file;
 	/* file_deny_write()를 이용하여 파일에 대한 write를 거부 */
 	file_deny_write(file);
+	
 	/* 락 해제 */
 	// lock_release(&file_lock);
 
@@ -550,6 +552,7 @@ load(const char *file_name, struct intr_frame *if_)
 done:
 	/* We arrive here whether the load is successful or not. */
 	// file_close(file); // file 닫히면서 lock이 풀림
+				
 	return success;
 }
 
@@ -714,7 +717,6 @@ static bool
 setup_stack (struct intr_frame *if_) {
 	uint8_t *kpage;
 	bool success = false;
-	//printf("----------setup_stack 시작---------\n");
 	kpage = palloc_get_page (PAL_USER | PAL_ZERO);
 	if (kpage != NULL) {
 		success = install_page (((uint8_t *) USER_STACK) - PGSIZE, kpage, true);
@@ -723,7 +725,6 @@ setup_stack (struct intr_frame *if_) {
 		else
 			palloc_free_page (kpage);
 	}
-	//printf("----------setup_stack 끝---------\n");
 	return success;
 }
 
@@ -755,9 +756,6 @@ lazy_load_segment (struct page *page, void *aux) {
 	/* TODO: Load the segment from the file */
 	/* TODO: This called when the first page fault occurs on address VA. */
 	/* TODO: VA is available when calling this function. */
-	//("=========lazy_load_segment 시작=========\n");
-	// if (vm_do_claim_page(page) == false)
-	// 	return false;
 
 	struct file_info *aux_file_info = (struct file_info *)aux;
 
@@ -770,7 +768,6 @@ lazy_load_segment (struct page *page, void *aux) {
 
 	memset(page->frame->kva + aux_file_info->read_bytes, 0, aux_file_info->zero_bytes);
 
-	//("=========lazy_load_segment 끝=========\n");
 	return true;
 }
 
@@ -803,18 +800,17 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
 		/* TODO: Set up aux to pass information to the lazy_load_segment. */
-		// printf("----------로드세그먼트 시작---------\n");
 		struct file_info *aux_file_info;
 		aux_file_info = (struct file_info *)malloc(sizeof(struct file_info));
 		aux_file_info->file = file;
 		aux_file_info->offset = ofs;
 		aux_file_info->read_bytes = read_bytes;
 		aux_file_info->zero_bytes = zero_bytes;
-		// printf("----------aux 세팅---------\n");
 
 		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
-					writable, lazy_load_segment, (void*) aux_file_info))
+					writable, lazy_load_segment, (void*) aux_file_info)){
 			return false;
+		}
     
 		/* Advance. */
 		read_bytes -= page_read_bytes;
@@ -836,26 +832,15 @@ setup_stack (struct intr_frame *if_) {
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
 
-	//printf("----------setup_stack 시작---------\n");
-	//printf("-----va(setup_stack): %p ----------\n", stack_bottom);
 		if (vm_alloc_page(VM_ANON, stack_bottom, 1))
 		{
-			// printf("----------스택 얼록 완료!---------\n");
 			if (vm_claim_page(stack_bottom))
 			{
-				// printf("----------스택 프래임 할당 완료!---------\n");
-				// printf("--------setupstack tid: %d---------\n", thread_current()->tid);
 				if_->rsp = USER_STACK;
-				// printf("----------rsp를 USER_STACK으로 지정 ---------\n");
 				success = true;
-				// printf("----------success=true ---------\n");
 			}
 		}
 	struct page *temp = spt_find_page(&thread_current()->spt, stack_bottom);
-	//printf("temp kva: %p\n", temp->frame->kva);
-	//printf("hi\n");
-	//printf("temp kva: %p\n", pml4_get_page(thread_current()->pml4, stack_bottom));
-	//printf("----------setup_stack 끝: ---------\n");
 	return success;
 }
 #endif /* VM */
