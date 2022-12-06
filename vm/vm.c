@@ -181,8 +181,28 @@ vm_get_frame(void)
 
 /* Growing the stack. */
 static void
-vm_stack_growth(void *addr UNUSED)
+vm_stack_growth(void *addr UNUSED, uintptr_t rsp)
 {
+	printf("rsp: %p\n", rsp);
+	printf("round down rsp: %p\n", pg_round_up((void *)rsp));
+	printf("fault addr: %p\n", addr);
+
+	int growth_size = (int)(pg_round_up((void *)rsp) - pg_round_down(addr));
+	printf("growth_size: %d\n", growth_size);
+	int page_num = growth_size / PGSIZE;
+	printf("page_num: %d\n", page_num);
+	void *stack_bottom = (uint8_t *)pg_round_down(addr);
+	printf("for 이전, stack_bottom: %p\n", stack_bottom);
+	for (int i = 0; i <= page_num; i++)
+	{
+		stack_bottom -= (i*PGSIZE);
+		printf("for 내부, stack_bottom: %p\n", stack_bottom);
+		vm_alloc_page(VM_ANON, stack_bottom, 1);
+		spt_find_page(thread_current()->spt, addr);
+		printf("stack page alloc 완!\n");
+		vm_claim_page(stack_bottom);
+		printf("stack frame alloc 완!\n");
+	}
 }
 
 /* Handle the fault on write_protected page */
@@ -197,17 +217,49 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 {
 	struct supplemental_page_table *spt UNUSED = &thread_current()->spt;
 	struct page *page = NULL;
+	bool doclaim_r;
+	// uint8_t fault_addr = (uint8_t)addr;
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
 
-	// printf("VM_TRY_HANDLE_FAULT: %p\n", addr);
-	//printf("[vm_try_handle_fault] user: %d\n", user);
+	printf("=======page fault, addr: %p=======\n", addr);
+	/* STACK GROWTH */
+	void * rsp;
+	if (user == 1)
+		rsp = (void *)f->rsp;
+	else
+		rsp = (void *)thread_current()->rsp;
+
+	printf("rsp: %p\n", rsp);
+	printf("round down rsp: %p\n", pg_round_down((void *)rsp));
+	printf("fault addr: %p\n",addr);
+
+	if (rsp-8 <= addr)
+	{
+		if (((uint8_t *)USER_STACK - (uint8_t *)pg_round_down(addr)) <= MAXSTACK)
+		{
+			printf("스택아 자라라\n");
+			vm_stack_growth(addr, rsp);
+			printf("스택 자랐당\n");
+			// return true;
+		}
+		else{
+			//swap out 예정
+		}
+		return true;
+	}
+	check_address(addr);
+		/* lazy loading 으로 인한 page fault */
+	printf("지연로딩 시작!\n");
+	doclaim_r = vm_claim_page(addr);
+	printf("doclaim: %d\n", doclaim_r);
+	printf("지연로딩 끝!!\n");
+	return doclaim_r;
+
+		//printf("[vm_try_handle_fault] user: %d\n", user);
 	//printf("[vm_try_handle_fault] write: %d\n", write);
 	//printf("[vm_try_handle_fault] not_present: %d\n", not_present);
 	// printf("[vm_try_handle_fault] tid: %d\n", thread_current()->tid);
-
-	check_address(addr);
-
 	// if (not_present || write || user)
 	// { //  유효하지 않은 접근일 때
 	// 	// [3-2??] spt_find_page(spt, addr)가 null로 반환하는 경우도 생각해야할까?
@@ -215,12 +267,7 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	// 	// [3-2??] 해당 자원 해제?
 	// 	exit(-1);
 	// }
-	/* lazy loading 으로 인한 page fault */
-	page = spt_find_page(spt, addr);
-
-	bool doclaim_r = vm_do_claim_page(page);
-
-	return doclaim_r;
+	
 }
 
 /* Free the page.
