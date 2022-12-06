@@ -310,6 +310,7 @@ bool vm_do_claim_page(struct page *page)
 {
 	struct frame *frame = vm_get_frame();
 	int result = false;
+	struct thread *t = thread_current();
 	// printf("===========vm_do_claim_page: start=============\n");
 	// printf("[vm_do_claim_page] tid: %d\n", thread_current()->tid);
 
@@ -322,12 +323,10 @@ bool vm_do_claim_page(struct page *page)
 
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
 	// [3-1?] wr 세팅을 1로 하는게 맞나?
-	if (pml4_set_page(thread_current()->pml4, page->va, frame->kva, 1) == NULL)
-	{
-		// printf("[vm_do_claim_page] set_page 실패! \n");
+
+	if (!install_page(page->va, frame->kva, 1)){
 		return false;
 	}
-
 	// printf("[vm_do_claim_page] set_page 성공 \n");
 
 	result = swap_in(page, frame->kva);
@@ -375,24 +374,24 @@ uninit page를 할당하고 즉시 claim 해야함 */
 /* Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED)
 {
-	struct hash_iterator i;
-	hash_first(&i, &src->spt_hash);
-	while (hash_next (&i)){
-		struct page *p = hash_entry(hash_cur(&i), struct page, h_elem);
-		if (p->operations->type == VM_UNINIT)
-		{
-			vm_alloc_page_with_initializer(p->uninit.type, p->va, 1, lazy_load_segment, NULL);
-			vm_claim_page(p->va);
-		}
-		else
-		{
-			vm_alloc_page(p->operations->type, p->va, 1);
-			struct page *child_p = spt_find_page(&thread_current()->spt, p->va);
+	// struct hash_iterator i;
+	// hash_first(&i, &src->spt_hash);
+	// while (hash_next (&i)){
+	// 	struct page *p = hash_entry(hash_cur(&i), struct page, h_elem);
+	// 	if (p->operations->type == VM_UNINIT)
+	// 	{
+	// 		vm_alloc_page_with_initializer(p->uninit.type, p->va, 1, lazy_load_segment, NULL);
+	// 		//vm_claim_page(p->va);
+	// 	}
+	// 	else
+	// 	{
+	// 		vm_alloc_page(p->operations->type, p->va, 1);
+	// 		struct page *child_p = spt_find_page(&thread_current()->spt, p->va);
 
-			vm_claim_page(p->va);
-			memcpy(child_p->frame->kva, p->frame->kva, PGSIZE);
-		}
-	}
+	// 		vm_claim_page(p->va);
+	// 		memcpy(child_p->frame->kva, p->frame->kva, PGSIZE);
+	// 	}
+	// }
 
 	// //hex
 
@@ -406,11 +405,12 @@ void supplemental_copy_entry(struct hash_elem *e, void *aux){
 	struct page *p = hash_entry(e, struct page, h_elem);
 	//printf("---------spt_entry---------\n");
 	if (p->operations->type == VM_UNINIT){
+
 		//printf("---------spt_entry: VM_UNINIT---------\n");
 		vm_alloc_page_with_initializer(p->uninit.type, p->va, 1, lazy_load_segment, NULL);
-		vm_claim_page(p->va);
+		//vm_claim_page(p->va);
 
-		struct page *child_p = spt_find_page(&thread_current()->spt, p->va);
+		//struct page *child_p = spt_find_page(&thread_current()->spt, p->va);
 		//printf("[spt entry] p kva: %p\n", p->frame->kva);
 		//printf("[spt entry] p va: %p\n", p->frame->page->va);
 		//printf("[spt entry] child_p kva: %p\n", child_p->frame->kva);
