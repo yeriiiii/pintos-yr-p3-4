@@ -14,6 +14,7 @@
 #include "lib/string.h"
 #include "threads/palloc.h"
 #include "threads/synch.h"
+#include "threads/mmu.h"
 
 void syscall_entry (void);
 void syscall_handler (struct intr_frame *);
@@ -168,7 +169,8 @@ remove (const char *file) {
 // Parent~child struct 구현 
 
 int open (const char *file){
-	check_address(file); // 파일 유효 주소 확인
+	// check_address(file); // 파일 유효 주소 확인
+	printf("hi!\n");
 	lock_acquire(&filesys_lock);
 	struct file *open_file = filesys_open(file); // 파일 오픈 및 파일 명 지정
 	if (open_file == NULL){ // 오픈 파일 명 값 확인
@@ -198,7 +200,13 @@ int filesize(int fd){
 }
 
 int read (int fd, void *buffer, unsigned size){
-	check_address(buffer); // 버퍼 유효주소 확인
+
+	// check_address(buffer); // 버퍼 유효주소 확인
+	if (is_writable((uint64_t *)buffer) == 0)
+	{
+		exit(-1);
+	}
+
 	struct file *get_file = process_get_file(fd); // 파일 가져오기
 	int key_length = 0;
 
@@ -230,11 +238,13 @@ int read (int fd, void *buffer, unsigned size){
 }
 
 int write (int fd, const void *buffer, unsigned size){
-	check_address(buffer); // 버퍼 유효주소 확인
-	struct file *get_file = process_get_file(fd); // 파일 가져오기
-	if ( get_file->writable == 0) {
+	// check_address(buffer); // 버퍼 유효주소 확인
+	// if (is_writable((uint64_t *)buffer) == 0)
+	{
 		exit(-1);
 	}
+	struct file *get_file = process_get_file(fd); // 파일 가져오기
+
 	int key_length;
 	if (get_file == NULL){
 		return -1;
@@ -333,7 +343,7 @@ void *mmap(void *addr, size_t length, int writable, int fd, off_t offset)
 	// printf("pgrounddown: %p\n", pg_round_down(addr));
 	// printf("length: %d\n", length);
 	// printf("find_page: %d\n", spt_find_page(&thread_current()->spt, addr));
-	size_t file_size = filesize(fd);
+	size_t file_size = filesize(fd) < length ? filesize(fd) : length;
 
 	if ((fd != 0) && (fd != 1) && (file_size!= 0) && (addr != 0) && (length != 0) && (addr == pg_round_down(addr)) && (spt_find_page(&thread_current()->spt, addr) == NULL))
 	{
