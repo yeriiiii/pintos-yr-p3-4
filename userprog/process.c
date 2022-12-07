@@ -224,7 +224,8 @@ __do_fork (void *aux) {
 
 	/* Finally, switch to the newly created process. */
 	if (succ) {
-		do_iret (&if_);
+		// thread_current()->rsp = if_.rsp; // [3-3]
+		do_iret(&if_);
 	}
 error:
 	current->exit_status = TID_ERROR;
@@ -262,7 +263,8 @@ process_exec (void *f_name) {
 		return -1; 
 
 	/* Start switched process. */
-	do_iret (&_if);
+	// thread_current()->rsp = _if.rsp; // [3-3]
+	do_iret(&_if);
 	NOT_REACHED ();
 }
 
@@ -832,15 +834,15 @@ setup_stack (struct intr_frame *if_) {
 	 * TODO: You should mark the page is stack. */
 	/* TODO: Your code goes here */
 
-		if (vm_alloc_page(VM_ANON, stack_bottom, 1))
+	if (vm_alloc_page(VM_ANON, stack_bottom, 1))
+	{
+		if (vm_claim_page(stack_bottom))
 		{
-			if (vm_claim_page(stack_bottom))
-			{
-				if_->rsp = USER_STACK;
-				success = true;
-			}
+			if_->rsp = USER_STACK;
+			success = true;
 		}
-	struct page *temp = spt_find_page(&thread_current()->spt, stack_bottom);
+	}
+
 	return success;
 }
 

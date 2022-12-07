@@ -181,28 +181,9 @@ vm_get_frame(void)
 
 /* Growing the stack. */
 static void
-vm_stack_growth(void *addr UNUSED, uintptr_t rsp)
+vm_stack_growth(void *addr UNUSED)
 {
-	printf("rsp: %p\n", rsp);
-	printf("round down rsp: %p\n", pg_round_up((void *)rsp));
-	printf("fault addr: %p\n", addr);
-
-	int growth_size = (int)(pg_round_up((void *)rsp) - pg_round_down(addr));
-	printf("growth_size: %d\n", growth_size);
-	int page_num = growth_size / PGSIZE;
-	printf("page_num: %d\n", page_num);
-	void *stack_bottom = (uint8_t *)pg_round_down(addr);
-	printf("for 이전, stack_bottom: %p\n", stack_bottom);
-	for (int i = 0; i <= page_num; i++)
-	{
-		stack_bottom -= (i*PGSIZE);
-		printf("for 내부, stack_bottom: %p\n", stack_bottom);
-		vm_alloc_page(VM_ANON, stack_bottom, 1);
-		spt_find_page(thread_current()->spt, addr);
-		printf("stack page alloc 완!\n");
-		vm_claim_page(stack_bottom);
-		printf("stack frame alloc 완!\n");
-	}
+	vm_alloc_page(VM_ANON, addr, 1);
 }
 
 /* Handle the fault on write_protected page */
@@ -222,7 +203,11 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
 
-	printf("=======page fault, addr: %p=======\n", addr);
+	if ((!is_user_vaddr(addr)) || (addr == NULL))
+	{
+		exit(-1);
+	}
+	// printf("=======page fault, addr: %p=======\n", addr);
 	/* STACK GROWTH */
 	void * rsp;
 	if (user == 1)
@@ -230,33 +215,43 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	else
 		rsp = (void *)thread_current()->rsp;
 
-	printf("rsp: %p\n", rsp);
-	printf("round down rsp: %p\n", pg_round_down((void *)rsp));
-	printf("fault addr: %p\n",addr);
-
-	if (rsp-8 <= addr)
-	{
-		if (((uint8_t *)USER_STACK - (uint8_t *)pg_round_down(addr)) <= MAXSTACK)
-		{
-			printf("스택아 자라라\n");
-			vm_stack_growth(addr, rsp);
-			printf("스택 자랐당\n");
-			// return true;
-		}
-		else{
-			//swap out 예정
-		}
-		return true;
+	if ((rsp-8 <= addr) && (addr <= USER_STACK) && (addr >= (USER_STACK - MAXSTACK))) {
+		// printf("스택아 자라라\n");
+		vm_stack_growth(pg_round_down(addr));
+		// printf("스택 자랐당\n");
 	}
-	check_address(addr);
-		/* lazy loading 으로 인한 page fault */
-	printf("지연로딩 시작!\n");
-	doclaim_r = vm_claim_page(addr);
-	printf("doclaim: %d\n", doclaim_r);
-	printf("지연로딩 끝!!\n");
-	return doclaim_r;
 
-		//printf("[vm_try_handle_fault] user: %d\n", user);
+	// printf("rsp: %p\n", rsp);
+	// printf("round down rsp: %p\n", pg_round_down((void *)rsp));
+	// printf("fault addr: %p\n",addr);
+
+	// if (rsp-8 <= addr)
+	// {
+	// 	if (((uint8_t *)USER_STACK - (uint8_t *)pg_round_down(addr)) <= MAXSTACK)
+	// 	{
+	// 		
+	// 		vm_stack_growth(addr, rsp);
+	// 		
+	// 		// return true;
+	// 	}
+	// 	else{
+	// 		//swap out 예정
+	// 	}
+	// 	return true;
+	// }
+	if (spt_find_page(&thread_current()->spt, addr) == NULL){
+		// printf("페이지 어딧지 \n");
+		exit(-1);
+	}
+	/* lazy loading 으로 인한 page fault */
+	// printf("지연로딩 시작!\n");
+	doclaim_r = vm_claim_page(addr);
+	// printf("doclaim: %d\n", doclaim_r);
+	// printf("지연로딩 끝!!\n");
+
+	return doclaim_r;
+	
+	// printf("[vm_try_handle_fault] user: %d\n", user);
 	//printf("[vm_try_handle_fault] write: %d\n", write);
 	//printf("[vm_try_handle_fault] not_present: %d\n", not_present);
 	// printf("[vm_try_handle_fault] tid: %d\n", thread_current()->tid);
@@ -267,7 +262,6 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	// 	// [3-2??] 해당 자원 해제?
 	// 	exit(-1);
 	// }
-	
 }
 
 /* Free the page.

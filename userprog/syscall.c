@@ -67,6 +67,8 @@ syscall_init (void) {
 void
 syscall_handler (struct intr_frame *f UNUSED) {
 // TODO: Your implementation goes here.
+
+	thread_current()->rsp = f->rsp;
 	
 	int syscall_number = f->R.rax;
 	switch (syscall_number){
@@ -127,7 +129,6 @@ void check_address(void *addr) {
 	if((!is_user_vaddr(addr)) || spt_find_page(&thread_current()->spt, addr) == NULL || (addr == NULL)){	
 		exit(-1);
 	}
-
 /* 포인터가 가리키는 주소가 유저영역의 주소인지 확인 */
 /* 잘못된 접근일 경우 프로세스 종료 */
 }
