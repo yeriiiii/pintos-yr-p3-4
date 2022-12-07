@@ -29,14 +29,6 @@ static void initd (void *f_name);
 static void __do_fork (void *);
 //void argument_stack(char **token, int count, struct intr_frame *if_);
 
-/* Project 3 - Anonymous Page*/
-struct file_info
-{
-	struct file *file;
-	off_t offset;
-	uint32_t read_bytes;
-	uint32_t zero_bytes;
-};
 
 /* General process initializer for initd and other process. */
 static void
@@ -762,14 +754,23 @@ lazy_load_segment (struct page *page, void *aux) {
 	struct file_info *aux_file_info = (struct file_info *)aux;
 
 	file_seek(aux_file_info->file, aux_file_info->offset);
-	if (file_read(aux_file_info->file, page->frame->kva, aux_file_info->read_bytes) != (int)aux_file_info->read_bytes)
+	// printf("aux_file_info->file: %d\n", aux_file_info->file);
+	// printf("aux_file_info->read_bytes: %d\n", aux_file_info->read_bytes);
+	// printf("aux_file_info->zero_bytes: %d\n", aux_file_info->zero_bytes);
+	// printf("aux_file_info->offset: %d\n", aux_file_info->offset);
+	int result = file_read(aux_file_info->file, page->frame->kva, aux_file_info->read_bytes);
+	// printf("result: %d\n", result);
+
+	if ( result != (int)aux_file_info->read_bytes)
 	{
 		palloc_free_page(page->frame->kva);
 		return false;
 	}
 
+	// printf("[4]\n");
 	memset(page->frame->kva + aux_file_info->read_bytes, 0, aux_file_info->zero_bytes);
-
+	// printf("[5]\n");
+	
 	return true;
 }
 
@@ -806,14 +807,16 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		aux_file_info = (struct file_info *)malloc(sizeof(struct file_info));
 		aux_file_info->file = file;
 		aux_file_info->offset = ofs;
-		aux_file_info->read_bytes = read_bytes;
-		aux_file_info->zero_bytes = zero_bytes;
+		aux_file_info->read_bytes = page_read_bytes;
+		aux_file_info->zero_bytes = page_zero_bytes;
 
-		if (!vm_alloc_page_with_initializer (VM_ANON, upage,
-					writable, lazy_load_segment, (void*) aux_file_info)){
+		printf("writable: %d\n", writable);
+		if (!vm_alloc_page_with_initializer(VM_FILE, upage,
+											writable, lazy_load_segment, (void *)aux_file_info))
+		{
 			return false;
 		}
-    
+
 		/* Advance. */
 		read_bytes -= page_read_bytes;
 		zero_bytes -= page_zero_bytes;
