@@ -126,8 +126,8 @@ bool spt_insert_page(struct supplemental_page_table *spt,
 
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page)
 {
+	hash_delete(&spt->spt_hash, &page->h_elem);
 	vm_dealloc_page(page);
-	return true;
 }
 
 /* Get the struct frame, that will be evicted. */
@@ -306,6 +306,7 @@ bool vm_do_claim_page(struct page *page)
 	// printf("[vm_do_claim_page] set_page 성공 \n");
 
 	result = swap_in(page, frame->kva);
+	// printf("[vm_do_claim_page] swap in 성공 \n");
 	return result;
 }
 
