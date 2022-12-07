@@ -348,8 +348,8 @@ void supplemental_copy_entry(struct hash_elem *e, void *aux){
 	if (p->operations->type == VM_UNINIT){
 		vm_alloc_page_with_initializer(p->uninit.type, p->va, 1, lazy_load_segment, p->uninit.aux);
 	}
-	else{
-		vm_alloc_page(p->operations->type, p->va, 1);
+	else if (p->operations->type == VM_ANON) {
+		vm_alloc_page(VM_ANON, p->va, 1);
 		struct page *child_p = spt_find_page(&thread_current()->spt, p->va);
 		
 		vm_claim_page(p->va);
@@ -360,8 +360,18 @@ void supplemental_copy_entry(struct hash_elem *e, void *aux){
 		memcpy(child_p->frame->kva, p->frame->kva, PGSIZE);
 		//printf("parent_p content: %s\n", p->frame->kva);
 		//printf("child_p page: %p\n", pml4_get_page(thread_current()->pml4, p->va));
+		
 	}
-	
+	else if (p->operations->type == VM_FILE){
+		struct file_info *temp = p->file.aux;
+		vm_alloc_page(VM_FILE, p->va, temp->writable);
+		struct page *child_p = spt_find_page(&thread_current()->spt, p->va);
+		vm_claim_page(p->va);
+		memcpy(child_p->frame->kva, p->frame->kva, PGSIZE);
+	}
+	else {
+		printf("유효하지 않은 페이지 타입!\n");
+	}
 }
 
 /* Project 3-2 Anonymous Page */
