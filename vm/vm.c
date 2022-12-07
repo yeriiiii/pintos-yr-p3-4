@@ -62,6 +62,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 		} //[3-1?] ??
 		else if (type == VM_FILE)
 		{
+			printf("aux: %p\n", aux);
 			uninit_new(new_page, upage, init, type, aux, file_backed_initializer);
 		}
 		// else if (type == VM_MARKER_0){
@@ -69,7 +70,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 		// }
 		else
 		{
-			uninit_new(new_page, upage, init, type, aux, NULL);
+			// uninit_new(new_page, upage, init, type, aux, NULL);
 			goto err;
 		}
 		/* TODO: Insert the page into the spt. */
@@ -202,12 +203,13 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	// uint8_t fault_addr = (uint8_t)addr;
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
+	printf("=======page fault, addr: %p=======\n", addr);
 
 	if ((!is_user_vaddr(addr)) || (addr == NULL))
 	{
 		exit(-1);
 	}
-	// printf("=======page fault, addr: %p=======\n", addr);
+	
 	/* STACK GROWTH */
 	void * rsp;
 	if (user == 1)
@@ -290,23 +292,38 @@ bool vm_do_claim_page(struct page *page)
 	struct frame *frame = vm_get_frame();
 	int result = false;
 	struct thread *t = thread_current();
-	// printf("===========vm_do_claim_page: start=============\n");
-	// printf("[vm_do_claim_page] tid: %d\n", thread_current()->tid);
+	bool writable;
+	printf("===========vm_do_claim_page: start=============\n");
+	printf("[vm_do_claim_page] tid: %d\n", thread_current()->tid);
 
 	/* Set links */
 	frame->page = page;
 	page->frame = frame;
+	printf("type: %d\n", page->operations->type);
 
+	struct uninit_page *uninit = &page->uninit;
+	void *aux = uninit->aux;
+	if (uninit->type == VM_FILE){
+		struct file_info *aux_file_info = (struct file_info *)aux;
+		writable = aux_file_info->writable;
+		printf("temp writable: %d\n", aux_file_info->writable);
+	}
+	else{
+		writable = 1;
+	}
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
 	// [3-1?] wr 세팅을 1로 하는게 맞나?
 
-	if (!install_page(page->va, frame->kva, 1)){
+	if (!install_page(page->va, frame->kva, writable))
+	{
+		printf("실 패!\n");
 		return false;
 	}
+	// printf("pte: %p\n", *( (uint64_t *) page->va));
 	// printf("[vm_do_claim_page] set_page 성공 \n");
 
 	result = swap_in(page, frame->kva);
-	// printf("[vm_do_claim_page] swap in 성공 \n");
+	printf("[vm_do_claim_page] swap in 성공 \n");
 	return result;
 }
 

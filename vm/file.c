@@ -3,6 +3,7 @@
 #include "vm/vm.h"
 #include "threads/vaddr.h"
 #include "userprog/process.h"
+#include "filesys/file.h"
 
 static bool file_backed_swap_in (struct page *page, void *kva);
 static bool file_backed_swap_out (struct page *page);
@@ -102,13 +103,13 @@ do_mmap (void *addr, size_t length, int writable,
 }
 
 /* Do the munmap */
-// void
-// do_munmap (void *addr) {
-// 	printf("addr in munmap = %p\n", addr);
-// 	struct supplemental_page_table *cur_spt = &thread_current()->spt;
-// 	spt_remove_page(cur_spt, spt_find_page(cur_spt, addr));
+void
+do_munmap (void *addr) {
+	// printf("addr in munmap = %p\n", addr);
+	struct supplemental_page_table *cur_spt = &thread_current()->spt;
+	spt_remove_page(cur_spt, spt_find_page(cur_spt, addr));
 
-// }
+}
 
 // void do_munmap(void *addr)
 // {
