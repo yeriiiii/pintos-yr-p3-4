@@ -203,11 +203,15 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
 
+	// printf("=======page fault, addr: %p=======\n", addr);
+	// printf("[vm_try_handle_fault] user: %d\n", user);
+	// printf("[vm_try_handle_fault] write: %d\n", write);
+	// printf("[vm_try_handle_fault] not_present: %d\n", not_present);
+	// printf("[vm_try_handle_fault] tid: %d\n", thread_current()->tid);
 	if ((!is_user_vaddr(addr)) || (addr == NULL))
 	{
 		exit(-1);
 	}
-	// printf("=======page fault, addr: %p=======\n", addr);
 	/* STACK GROWTH */
 	void * rsp;
 	if (user == 1)
@@ -251,10 +255,6 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 
 	return doclaim_r;
 	
-	// printf("[vm_try_handle_fault] user: %d\n", user);
-	//printf("[vm_try_handle_fault] write: %d\n", write);
-	//printf("[vm_try_handle_fault] not_present: %d\n", not_present);
-	// printf("[vm_try_handle_fault] tid: %d\n", thread_current()->tid);
 	// if (not_present || write || user)
 	// { //  유효하지 않은 접근일 때
 	// 	// [3-2??] spt_find_page(spt, addr)가 null로 반환하는 경우도 생각해야할까?

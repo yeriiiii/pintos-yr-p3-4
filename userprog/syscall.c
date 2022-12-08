@@ -35,8 +35,10 @@ void close (int fd); // 열린 파일을 닫음
 int fork (const char *thread_name, struct intr_frame *f);
 int exec (const char *cmd_line);
 int wait (int pid);
+
 void *mmap(void *addr, size_t length, int writable, int fd, off_t offset);
 void munmap(void *addr);
+void check_buffer(void *addr);
 
 /* System call.
  *
@@ -140,6 +142,14 @@ void check_address(void *addr) {
 /* 잘못된 접근일 경우 프로세스 종료 */
 }
 
+void check_buffer(void *addr) {
+	if((!is_user_vaddr(addr)) || spt_find_page(&thread_current()->spt, addr) == NULL || (addr == NULL) || is_writable((uint64_t *)addr) == 0){	
+		exit(-1);
+	}
+/* 포인터가 가리키는 주소가 유저영역의 주소인지 확인 */
+/* 잘못된 접근일 경우 프로세스 종료 */
+}
+
 
 void
 halt (void) {
@@ -168,7 +178,8 @@ remove (const char *file) {
 // Parent~child struct 구현 
 
 int open (const char *file){
-	check_address(file); // 파일 유효 주소 확인
+	// check_address(file); // 파일 유효 주소 확인
+	// check_buffer(file);
 	lock_acquire(&filesys_lock);
 	struct file *open_file = filesys_open(file); // 파일 오픈 및 파일 명 지정
 	if (open_file == NULL){ // 오픈 파일 명 값 확인
@@ -198,6 +209,12 @@ int filesize(int fd){
 }
 
 int read (int fd, void *buffer, unsigned size){
+	// if (is_writable((uint64_t *)buffer) == 1)
+	// {
+	// 	// printf("oh!\n");
+	// 	exit(-1);
+	// }
+	// check_buffer(buffer);
 	check_address(buffer); // 버퍼 유효주소 확인
 	struct file *get_file = process_get_file(fd); // 파일 가져오기
 	int key_length = 0;
@@ -230,11 +247,14 @@ int read (int fd, void *buffer, unsigned size){
 }
 
 int write (int fd, const void *buffer, unsigned size){
-	check_address(buffer); // 버퍼 유효주소 확인
+	// if (is_writable((uint64_t *)buffer) == 0)
+	// {
+	// 	// printf("oh!\n");
+	// 	exit(-1);
+	// }
+	check_buffer(buffer);
+	// check_address(buffer); // 버퍼 유효주소 확인
 	struct file *get_file = process_get_file(fd); // 파일 가져오기
-	if ( get_file->writable == 0) {
-		exit(-1);
-	}
 	int key_length;
 	if (get_file == NULL){
 		return -1;

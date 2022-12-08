@@ -102,13 +102,13 @@ do_mmap (void *addr, size_t length, int writable,
 }
 
 /* Do the munmap */
-// void
-// do_munmap (void *addr) {
-// 	printf("addr in munmap = %p\n", addr);
-// 	struct supplemental_page_table *cur_spt = &thread_current()->spt;
-// 	spt_remove_page(cur_spt, spt_find_page(cur_spt, addr));
+void
+do_munmap (void *addr) {
+	// printf("addr in munmap = %p\n", addr);
+	struct supplemental_page_table *cur_spt = &thread_current()->spt;
+	spt_remove_page(cur_spt, spt_find_page(cur_spt, addr));
 
-// }
+}
 
 // void do_munmap(void *addr)
 // {
@@ -123,9 +123,9 @@ do_mmap (void *addr, size_t length, int writable,
 // 			return NULL;
 // 		}
 
-// 		// // 연결 해제
-// 		// find_page->frame = NULL;
-// 		// find_frame->page = NULL;
+// 		// 연결 해제
+// 		find_page->frame = NULL;
+// 		find_frame->page = NULL;
 
 // 		struct file_info *container = (struct file_info *)find_page->uninit.aux;
 // 		// 페이지의 dirty bit이 1이면 true를, 0이면 false를 리턴한다.
