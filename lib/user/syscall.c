@@ -107,7 +107,7 @@ remove (const char *file) {
 
 int
 open (const char *file) {
-	printf("?\n");
+	// printf("?\n");
 	return syscall1(SYS_OPEN, file);
 }
 
