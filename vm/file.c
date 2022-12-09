@@ -27,7 +27,9 @@ bool
 file_backed_initializer (struct page *page, enum vm_type type, void *kva) {
 	/* Set up the handler */
 	page->operations = &file_ops;
-	void *temp = &page->uninit.aux;
+	struct file_info *temp = (struct file_info *) page->uninit.aux;
+	// printf("page_read_bytes: %d\n", temp->read_bytes);
+	// printf("page_zero_bytes: %d\n", temp->zero_bytes);
 
 	struct file_page *file_page = &page->file;
 	file_page->aux = temp;
@@ -39,12 +41,44 @@ file_backed_initializer (struct page *page, enum vm_type type, void *kva) {
 static bool
 file_backed_swap_in (struct page *page, void *kva) {
 	struct file_page *file_page UNUSED = &page->file;
+	struct thread *page_owner = page->frame->thread;
+	struct file_info *aux = (struct file_info *) page->file.aux;
+	/* 내용 읽어오고 */
+	// 여기 커널?
+	// printf("kva: %p\n", kva);
+	// printf("aux: %p\n", aux);
+	// printf("aux->read_bytes: %x\n", aux->read_bytes);
+	// printf("aux->zero_bytes: %x\n", aux->zero_bytes);
+	// printf("aux->offset: %x\n", aux->offset);
+
+	int result = file_read_at(aux->file, page->frame->kva, aux->read_bytes, aux->offset);
+	// printf("result: %d\n", result);
+	if (result != (int)aux->read_bytes)
+	{
+		// printf("file_backed_swap_in: false\n");
+		return false;
+	}
+	// printf("11\n");
+
+	memset(page->frame->kva + aux->read_bytes, 0, aux->zero_bytes);
+
+	return true;
 }
 
 /* Swap out the page by writeback contents to the file. */
 static bool
 file_backed_swap_out (struct page *page) {
 	struct file_page *file_page UNUSED = &page->file;
+	struct thread *page_owner = page->frame->thread;
+	struct file_info *aux = &page->file.aux;
+
+	if (pml4_is_dirty(page_owner->pml4, page->va)){
+		file_write_at(aux->file, page->va, aux->read_bytes, aux->offset);
+		pml4_set_dirty(page_owner->pml4, page->va, 0);
+	}
+	pml4_clear_page(page_owner->pml4, page->va);
+	//spt_remove(&page_owner->spt, page);
+	// swap-in할때 내쫓은 애 다시 돌아와야 하는데 어케 하지?
 }
 
 /* Destory the file backed page. PAGE will be freed by the caller. */
@@ -78,6 +112,8 @@ do_mmap (void *addr, size_t length, int writable,
 		/* Do calculate how to fill this page.
 		 * We will read PAGE_READ_BYTES bytes from FILE
 		 * and zero the final PAGE_ZERO_BYTES bytes. */
+		// printf("offset: %p\n", offset);
+
 		size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
 		size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
@@ -92,6 +128,8 @@ do_mmap (void *addr, size_t length, int writable,
 		aux_file_info->zero_bytes = page_zero_bytes;
 		aux_file_info->writable = writable;
 
+		// printf("page_read_bytes: %d\n", page_read_bytes);
+		// printf("page_zero_bytes: %d\n", page_zero_bytes);
 		if (!vm_alloc_page_with_initializer(VM_FILE, addr,
 											writable, lazy_load_segment, (void *)aux_file_info))
 		{
@@ -117,7 +155,7 @@ do_mmap (void *addr, size_t length, int writable,
 		// printf("mmap list : %p\n", &thread_current()->mmap_list);
 		// printf("mmap_list end: %p\n", list_end(&thread_current()->mmap_list));
 		// printf("mfile elem : %p\n", &m_file->elem);
-		list_push_back(&thread_current()->mmap_list, &m_file->elem);
+	list_push_back(&thread_current()->mmap_list, &m_file->elem);
 	// printf("mmap list : %p\n", &thread_current()->mmap_list);
 
 	return origin_addr;

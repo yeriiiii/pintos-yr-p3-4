@@ -7,6 +7,7 @@
 #include "threads/mmu.h"
 
 #include "userprog/process.h"
+#include "threads/thread.h"
 
 /* Initializes the virtual memory subsystem by invoking each subsystem's
  * intialize codes. */
@@ -20,6 +21,12 @@ void vm_init(void)
 	register_inspect_intr();
 	/* DO NOT MODIFY UPPER LINES. */
 	/* TODO: Your code goes here. */
+
+	/* Project 3 - VM : lru list 초기화 */
+	list_init(&lru_list);
+	// printf("list_init 완료!\n");
+	lock_init(&lru_list_lock);
+	lru_clock = NULL;
 }
 
 /* Get the type of the page. This function is useful if you want to know the
@@ -93,14 +100,14 @@ spt_find_page(struct supplemental_page_table *spt, void *va)
 	/* TODO: Fill this function. */
 	// [3-1?] 우리가 원하는 va에 해당하는 페이지를 찾기 위해 가짜 페이지 할당
 	// printf("----va: %p-----\n", va);
-	struct page *temp = palloc_get_page(PAL_USER);
+	struct page *temp = (struct page *)malloc(sizeof(struct page));
 	temp->va = pg_round_down(va);
 	// printf("----temp->va: %p-----\n", temp->va);
 	// 가짜 페이지와 같은 hash를 가지는 페이지를 찾아옴
 	struct hash_elem *va_hash_elem = hash_find(&spt->spt_hash, &temp->h_elem);
 	// printf("----hash_elem: %p-----\n", va_hash_elem);
 	// 가짜 페이지 메모리 해제
-	palloc_free_page(temp);
+	free(temp);
 
 	if (va_hash_elem != NULL)
 	{
@@ -136,7 +143,78 @@ static struct frame *
 vm_get_victim(void)
 {
 	struct frame *victim = NULL;
-	/* TODO: The policy for eviction is up to you. */
+	struct list_elem *fe;
+	struct frame *f;
+	/* TODO: The policy for eviction is up to you. - Clock Algorithm*/
+	/* while (제거할 페이지를 못찾을때까지 = 리스트 끝까지) {
+		if (현재 페이지의 accessed bit == 0)
+			너가 나가
+		else
+			accessed bit 0으로 세팅
+		clock pointer 옮기기
+	}*/
+
+	// lock_acquire(&lru_list_lock);
+
+	if (lru_clock == NULL){
+		lru_clock = list_begin(&lru_list);
+	}
+	// printf("lru_clock: %p\n", lru_clock);
+
+	// printf("lru_list is empty: %d\n", list_empty(&lru_list));
+	/* 첫번째 for문 : lru clock부터 리스트 끝까지 돌기*/
+	// 시간이 남으면 for문을 하나로 만들어보자
+	for (fe = lru_clock; fe != list_tail(&lru_list); fe = list_next(fe))
+	{
+		f = list_entry(fe, struct frame, lru);
+		// printf("fe: %p\n", fe);
+		if (!pml4_is_accessed(f->thread->pml4, f->page->va)){
+			// printf("찾았다!\n");
+			victim = f;
+			lru_clock = list_remove(fe);
+			/* TBD: 원소가 하나인데 쫓아내서 리스트에서 제거했을 경우, lru_clock에 list tail이 들어가게 되는데 괜찮나...? */
+			if (lru_clock == list_tail(&lru_list)){
+				lru_clock = list_begin(&lru_clock);
+			}
+			goto done;
+		}
+		else {
+			pml4_set_accessed(f->thread->pml4, f->page->va, 0);
+			// printf("set_acccess_bit into 0\n");
+		}
+	}
+
+	// printf("lru_clock: %p\n", lru_clock);
+
+	/* 두번째 for 문 : 처음부터 lru clock까지 돌기 */
+	for (fe = list_begin(&lru_list); fe != list_next(lru_clock); fe = list_next(fe))
+	{
+		f = list_entry(fe, struct frame, lru);
+		// printf("fe: %p\n", fe);
+		if (!pml4_is_accessed(f->thread->pml4, f->page->va))
+		{
+			victim = f;
+			lru_clock = list_remove(fe);
+			if (lru_clock == list_tail(&lru_list))
+			{
+				
+				lru_clock = list_begin(&lru_clock);
+			}
+			goto done;
+		}
+		else
+		{
+			pml4_set_accessed(f->thread->pml4, f->page->va, 0);
+		}
+	}
+
+	// printf("lru_clock: %p\n", lru_clock);
+
+	goto done;
+
+done:
+	// lock_release(&lru_list_lock);
+	// printf("victim: %p\n", victim);
 
 	return victim;
 }
@@ -146,10 +224,24 @@ vm_get_victim(void)
 static struct frame *
 vm_evict_frame(void)
 {
+	// printf("vm_evict_frame\n");
 	struct frame *victim UNUSED = vm_get_victim();
+	if (victim == NULL){
+		return victim;
+	}
 	/* TODO: swap out the victim and return the evicted frame. */
+	
+	/* virtual page swap out */
+	swap_out(victim->page);
 
-	return NULL;
+	/* frame 구조체 초기화 */
+	victim->page = NULL;
+	victim->thread = NULL;
+
+	/* frame 메모리 영역 안에 기록된 내용 0으로 초기화해주기 */
+	memset(victim->kva, 0, PGSIZE);
+
+	return victim;
 }
 
 /* palloc() and get frame. If there is no available page, evict the page
@@ -161,10 +253,15 @@ vm_get_frame(void)
 {
 	struct frame *frame = NULL;
 	/* TODO: Fill this function. */
-	void *new_kva = palloc_get_page(PAL_USER); //유저 풀에서 새로운 물리 페이지를 가져온다
+	// printf("vm_get_frame\n");
+	void *new_kva = palloc_get_page(PAL_USER); // 유저 풀에서 새로운 물리 페이지를 가져온다
+	// printf("new_kva = %p\n", new_kva);
 	if (new_kva == NULL)
 	{
-		PANIC("todo"); //페이지 할당이 실패하면, 일단 패닉 -> 나중에 수정
+		// printf("이제 frame이 없어유\n");
+		frame = vm_evict_frame();
+		if (frame ==NULL)
+			PANIC("todo"); // 쫓아낼 프레임도 없으면 패닉
 	}
 	else
 	{
@@ -172,8 +269,14 @@ vm_get_frame(void)
 		frame = (struct frame *)malloc(sizeof(struct frame)); // [3-1?] 프레임 할당은 어디서 해오지????!!@!!@!!@!!@!@malloc을 하라
 		frame->kva = new_kva;
 		frame->page = NULL;
-		// [3-1?] 다른 멤버들 초기화 필요? (operations, union)
 	}
+	frame->thread = thread_current();
+
+	// lock_acquire(&lru_list_lock);
+	list_push_back(&lru_list, &frame->lru);
+	// [3-1?] 다른 멤버들 초기화 필요? (operations, union)
+	// lock_release(&lru_list_lock);
+
 	ASSERT(frame != NULL);
 	ASSERT(frame->page == NULL);
 	return frame;
@@ -203,13 +306,15 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	// uint8_t fault_addr = (uint8_t)addr;
 	/* TODO: Validate the fault */
 	/* TODO: Your code goes here */
+	
 	// printf("=======page fault, addr: %p=======\n", addr);
 
 	if ((!is_user_vaddr(addr)) || (addr == NULL))
 	{
+		// printf("찐폴트\n");
 		exit(-1);
 	}
-	
+
 	/* STACK GROWTH */
 	void * rsp;
 	if (user == 1)
@@ -226,22 +331,10 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	// printf("rsp: %p\n", rsp);
 	// printf("round down rsp: %p\n", pg_round_down((void *)rsp));
 	// printf("fault addr: %p\n",addr);
-
-	// if (rsp-8 <= addr)
-	// {
-	// 	if (((uint8_t *)USER_STACK - (uint8_t *)pg_round_down(addr)) <= MAXSTACK)
-	// 	{
-	// 		
-	// 		vm_stack_growth(addr, rsp);
-	// 		
-	// 		// return true;
-	// 	}
-	// 	else{
-	// 		//swap out 예정
-	// 	}
-	// 	return true;
-	// }
-	if (spt_find_page(&thread_current()->spt, addr) == NULL){
+	// printf("thread_current: %p\n", thread_current());
+	// printf("thread_current spt: %p\n", &thread_current()->spt);
+	if (spt_find_page(&thread_current()->spt, addr) == NULL)
+	{
 		// printf("페이지 어딧지 \n");
 		exit(-1);
 	}
@@ -280,7 +373,10 @@ bool vm_claim_page(void *va UNUSED)
 	struct page *page = NULL;
 	/* TODO: Fill this function */
 	page = spt_find_page(&thread_current()->spt, va);
-	if (page == NULL){
+	// printf("page type: %d\n" ,page->uninit.type);
+	if (page == NULL)
+	{
+		printf("page==NULL\n");
 		return false;
 	}
 	return vm_do_claim_page(page);
@@ -317,7 +413,7 @@ bool vm_do_claim_page(struct page *page)
 
 	if (!install_page(page->va, frame->kva, 1))
 	{
-		// printf("실 패!\n");
+		printf("실 패!\n");
 		return false;
 	}
 	// printf("pte: %p\n", *( (uint64_t *) page->va));
@@ -411,5 +507,5 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED)
 void supplemental_destroy_entry(struct hash_elem *e, void *aux)
 {
 	struct page *p = hash_entry(e, struct page, h_elem);
-	free(p);
+	vm_dealloc_page(p);
 }
