@@ -363,7 +363,7 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
  * DO NOT MODIFY THIS FUNCTION. */
 void vm_dealloc_page(struct page *page)
 {
-	destroy(page);
+	// destroy(page);
 	free(page);
 }
 
@@ -376,7 +376,7 @@ bool vm_claim_page(void *va UNUSED)
 	// printf("page type: %d\n" ,page->uninit.type);
 	if (page == NULL)
 	{
-		printf("page==NULL\n");
+		// printf("page==NULL\n");
 		return false;
 	}
 	return vm_do_claim_page(page);
@@ -453,46 +453,57 @@ uninit page를 할당하고 즉시 claim 해야함 */
 /* Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED){
 	hash_apply(&src->spt_hash, supplemental_copy_entry);
+	// printf("copy 끝\n");
 	return true;
 }
 
 void supplemental_copy_entry(struct hash_elem *e, void *aux){
+	// printf("entry\n");
 
 	struct page *p = hash_entry(e, struct page, h_elem);
-	if (p->operations->type == VM_UNINIT){
-		// printf("[spt entry] : uninit p kva: %p", p->frame->kva);
+	// printf("page: %p\n", p);
+	if (p->operations->type == VM_UNINIT)
+	{
+		// printf("VM_UNINIT\n");
+		// printf("[spt entry] : uninit p kva: %p\n", p->frame->kva);
+
+		
 		vm_alloc_page_with_initializer(p->uninit.type, p->va, 1, lazy_load_segment, p->uninit.aux);
 	}
 	else if (p->operations->type == VM_ANON) {
+		// printf("VM_ANON\n");
 		vm_alloc_page(VM_ANON, p->va, 1);
 		struct page *child_p = spt_find_page(&thread_current()->spt, p->va);
 		
 		vm_claim_page(p->va);
-		// printf("[spt entry] p kva: %p\n", p->frame->kva);
+		// printf("[spt entry] : vm_anon p kva: %p\n", p->frame->kva);
 		// printf("[spt entry] p va: %p\n", p->frame->page->va);
 		// printf("[spt entry] child_p kva: %p\n", child_p->frame->kva);
 		// printf("[spt entry] child_p va: %p\n", child_p->frame->page->va);
 		memcpy(child_p->frame->kva, p->frame->kva, PGSIZE);
-		//printf("parent_p content: %s\n", p->frame->kva);
+		// printf("parent_p content: %s\n", p->frame->kva);
 		//printf("child_p page: %p\n", pml4_get_page(thread_current()->pml4, p->va));
 		
 	}
 	else if (p->operations->type == VM_FILE){
+		// printf("VM_FILE\n");
 		// printf("[spt entry] : VM_FILE p kva: %p\n", p->frame->kva);
-		// printf("[spt entry] : VM_FILE p aux: %p\n", aux);
-		// struct file_info *temp = p->file.aux;
+		struct file_info *temp = (struct file_info *) p->file.aux;
 		vm_alloc_page(VM_FILE, p->va, 1);
 		// printf("[1]\n");
-		struct page *child_p = spt_find_page(&thread_current()->spt, p->va);
+		struct page *child_p = (struct page *)spt_find_page(&thread_current()->spt, p->va);
+		struct file_page *file_page = &child_p->file;
+		file_page->aux = temp;
+
+		// printf("[spt entry] : VM_FILE p aux: %p\n", temp->file);
+		// printf("[spt entry] : VM_FILE child p aux: %p\n", ((struct file_info *)(file_page->aux))->file);
 		// printf("[2]\n");
 		vm_claim_page(p->va);
 		// printf("[3]\n");
 		memcpy(child_p->frame->kva, p->frame->kva, PGSIZE);
 		// printf("[4]\n");
 	}
-	else {
-		printf("유효하지 않은 페이지 타입!\n");
-	}
+
 }
 
 /* Project 3-2 Anonymous Page */
@@ -502,10 +513,14 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED)
 	/* TODO: Destroy all the supplemental_page_table hold by thread and
 	 * TODO: writeback all the modified contents to the storage. */
 	hash_destroy(&spt->spt_hash, supplemental_destroy_entry);
+	// printf("hi\n");
 }
 
 void supplemental_destroy_entry(struct hash_elem *e, void *aux)
 {
 	struct page *p = hash_entry(e, struct page, h_elem);
-	vm_dealloc_page(p);
+	if (p->operations->type == VM_FILE){
+		do_munmap(p->va);
+	}
+	// spt_remove_page(&thread_current()->spt,p);
 }

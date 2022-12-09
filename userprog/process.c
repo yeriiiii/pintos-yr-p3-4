@@ -301,12 +301,12 @@ process_exit (void) {
 	file_close(curr->running); // load에서 file close -> process_exit할때 close file_deny_write
 
 	sema_up(&curr->wait_sema); // 종료되었다고 기다리고 있는 부모 thread에게 signal 보냄-> sema_up에서 val을 올려줌
-	process_cleanup();	// pml4를 날림(이 함수를 call 한 thread의 pml4)
 	/* [TBD] 수민이가 이거 올리면 exit 통과한댔는데 왜 안함 */
+	process_cleanup();	// pml4를 날림(이 함수를 call 한 thread의 pml4)
+	// printf("hi\n");
 
 	sema_down(&curr->free_sema); // 부모에게 exit_Status가 정확히 전달되었는지 확인(wait)
-	
-
+	// printf("bi\n");
 }
 
 /* Free the current process's resources. */
@@ -316,6 +316,7 @@ process_cleanup (void) {
 
 #ifdef VM
 	supplemental_page_table_kill (&curr->spt);
+	// printf("kill\n");
 #endif
 
 	uint64_t *pml4;

@@ -307,6 +307,7 @@ void close (int fd){
 	}
 	file_close(get_file);
 	cur_thread->fd_table[fd] = NULL; // fd 초기화
+	// printf("?\n");
 };
 
 

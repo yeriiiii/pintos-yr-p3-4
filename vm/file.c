@@ -149,6 +149,7 @@ do_mmap (void *addr, size_t length, int writable,
 	}
 
 	if (list_empty(&m_file->page_list)){
+		// printf("페이지 없다\n");
 		free(m_file);
 	}
 
@@ -156,6 +157,7 @@ do_mmap (void *addr, size_t length, int writable,
 		// printf("mmap_list end: %p\n", list_end(&thread_current()->mmap_list));
 		// printf("mfile elem : %p\n", &m_file->elem);
 	list_push_back(&thread_current()->mmap_list, &m_file->elem);
+	// printf("tid: %d\n", thread_current()->tid);
 	// printf("mmap list : %p\n", &thread_current()->mmap_list);
 
 	return origin_addr;
@@ -174,6 +176,7 @@ do_munmap (void *addr) {
 	struct list_elem *e = list_begin(&thread_current()->mmap_list);
 	struct mmap_file *e_file;
 	struct thread *cur = thread_current();
+	// printf("thread tid: %d\n",cur->tid);
 
 	while (e != list_end(&cur->mmap_list))
 	{
@@ -186,9 +189,9 @@ do_munmap (void *addr) {
 			struct list *p_list = &e_file->page_list;
 			struct list_elem *pe;
 			struct page *p;
-			// printf("[3]\n");0
+			// printf("[3]\n");
 
-			for (pe = list_begin(p_list); !list_tail(p_list); pe = list_next(pe))
+			for (pe = list_begin(p_list); pe != list_tail(p_list); )
 			{
 				// printf("[munmap] pe: %p\n", pe);
 				// printf("[munmap] p_list: %p\n", &p_list);
@@ -196,7 +199,7 @@ do_munmap (void *addr) {
 				// printf("[munmap] list_head %p\n", &p_list.head);
 				// printf("[munmap] list_tail %p\n", &p_list.tail);
 				p = list_entry(pe, struct page, mmap_elem);
-				struct file_info *aux = &p->file.aux;
+				struct file_info *aux = p->file.aux;
 				// printf("[4]\n");
 				// list_remove(pe);
 				// printf("[5]\n");
@@ -210,7 +213,9 @@ do_munmap (void *addr) {
 				// printf("[7]\n");
 				pml4_clear_page(cur->pml4, p->va);
 				// printf("[8]\n");
-				spt_remove_page(&cur->spt, p);
+				struct page *before_p = p;
+				pe = list_next(pe);
+				spt_remove_page(&cur->spt, before_p);
 				// printf("[9]\n");
 				
 			}
