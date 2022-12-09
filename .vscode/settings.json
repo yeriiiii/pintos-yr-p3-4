@@ -8,6 +8,6 @@
         "synch.h": "c",
         "main.h": "c",
         "init.h": "c",
-        "off_t.h": "c"
+        "thread.h": "c"
     }
 }

@@ -155,7 +155,9 @@ list_tail (struct list *list) {
    list_push_back(). */
 void
 list_insert (struct list_elem *before, struct list_elem *elem) {
-	ASSERT (is_interior (before) || is_tail (before));
+	// printf("is_interior: %d", is_interior(before));
+	// printf("is_tail: %d", is_tail(before));
+	ASSERT(is_interior(before) || is_tail(before));
 	ASSERT (elem != NULL);
 
 	elem->prev = before->prev;
