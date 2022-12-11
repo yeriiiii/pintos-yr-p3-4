@@ -105,7 +105,7 @@ process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 		// printf("----------process_fork : tid error---------\n");
 		return TID_ERROR;
 	}
-	// printf("----------process_fork 끝---------\n");
+	// printf("----------process_fork 끝 : new_tid : %d---------\n", new_tid);
 	return new_tid;
 }
 
@@ -274,7 +274,8 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	struct thread* parent_thread = thread_current();
+	// printf("process_wait 시작\n");
+	struct thread *parent_thread = thread_current();
 	struct thread* child_thread = get_child_process(child_tid);
 	if (child_thread == NULL) {
 		return -1;
@@ -283,14 +284,16 @@ process_wait (tid_t child_tid UNUSED) {
 	int exit_status = child_thread->exit_status;// 여기서부터는 깨어났다.
     // 깨어나면 child의 exit_status를 얻는다.
 	list_remove(&child_thread->child_elem); // child를 부모 list에서 지운다.
-	sema_up(&child_thread->free_sema);// 내가 받았음을 전달하는 sema  
+	sema_up(&child_thread->free_sema);// 내가 받았음을 전달하는 sema
+	// printf("process_wait 끝: %d\n", exit_status);
 	return exit_status;
 }
 
 /* Exit the process. This function is called by thread_exit (). */
 void
 process_exit (void) {
-	struct thread *curr = thread_current ();
+	printf("exit 시작\n");
+	struct thread *curr = thread_current();
 	/* TODO: Your code goes here.
 	 * TODO: Implement process termination message (see
 	 * TODO: project2/process_termination.html).
@@ -302,8 +305,9 @@ process_exit (void) {
 
 	sema_up(&curr->wait_sema); // 종료되었다고 기다리고 있는 부모 thread에게 signal 보냄-> sema_up에서 val을 올려줌
 	/* [TBD] 수민이가 이거 올리면 exit 통과한댔는데 왜 안함 */
-	process_cleanup();	// pml4를 날림(이 함수를 call 한 thread의 pml4)
-	// printf("hi\n");
+	printf("process_clean_up 시작\n");
+	process_cleanup(); // pml4를 날림(이 함수를 call 한 thread의 pml4)
+	printf("process_clean_up 끝\n");
 
 	sema_down(&curr->free_sema); // 부모에게 exit_Status가 정확히 전달되었는지 확인(wait)
 	// printf("bi\n");

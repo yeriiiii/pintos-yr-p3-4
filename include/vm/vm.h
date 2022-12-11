@@ -64,6 +64,7 @@ struct page
 #endif
 	};
 	bool writable;
+	bool cow; 
 };
 
 /* The representation of "frame" */
