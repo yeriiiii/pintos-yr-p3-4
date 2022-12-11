@@ -50,6 +50,7 @@ struct page
 
 	/* Your implementation */
 	struct hash_elem h_elem;
+	struct list_elem mmap_elem;
 
 	/* Per-type data are binded into the union.
 	 * Each function automatically detects the current union */
@@ -69,7 +70,14 @@ struct frame
 {
 	void *kva;
 	struct page *page;
+	struct list_elem lru;
+	struct thread *thread;
 };
+
+/* Project 3 - VM */
+struct list lru_list; // 할당된 물리 프레임들을 관리하는 리스트
+struct lock lru_list_lock;
+struct list_elem *lru_clock;
 
 /* The function table for page operations.
  * This is one way of implementing "interface" in C.
@@ -92,14 +100,22 @@ struct page_operations
 /* Representation of current process's memory space.
  * We don't want to force you to obey any specific design for this struct.
  * All designs up to you for this. */
-struct supplemental_page_table
-{
+struct supplemental_page_table{
 	struct hash spt_hash;
+};
+
+/* 매핑된 파일의 정보를 저장 */
+struct mmap_file {
+	void * mmap_addr; //
+	struct file *file; //매핑하는 파일의 오브젝트
+	struct list_elem elem; //mmap_file들의 리스트 연결을 위한 구조체, 리스트 헤드는 struct thread의 mmap_list
+	struct list page_list; //mmap_file에 해당하는 모든 페이지들의 리스트
 };
 
 /* typedef struct hash supplemental_page_table; */
 
 #include "threads/thread.h"
+
 void supplemental_page_table_init(struct supplemental_page_table *spt);
 bool supplemental_page_table_copy(struct supplemental_page_table *dst,
 								  struct supplemental_page_table *src);
@@ -131,4 +147,6 @@ static struct frame *vm_get_victim(void);
 bool vm_do_claim_page(struct page *page);
 static struct frame *vm_evict_frame(void);
 
+void supplemental_copy_entry(struct hash_elem *e, void *aux);
+void supplemental_destroy_entry(struct hash_elem *e, void *aux);
 #endif /* VM_VM_H */

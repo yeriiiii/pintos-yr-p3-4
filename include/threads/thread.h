@@ -128,6 +128,10 @@ struct thread {
 	struct file **fd_table;
 	struct intr_frame parent_if;
 	struct file *running;
+	
+	/* Project 3 - VM */
+	uintptr_t rsp;
+	struct list mmap_list;
 
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
@@ -136,6 +140,8 @@ struct thread {
 #ifdef VM
 	/* Table for whole virtual memory owned by thread. */
 	struct supplemental_page_table spt;
+
+	// user->kernel 전환 전에 rsp를 저장해둠
 #endif
 
 	/* Owned by thread.c. */

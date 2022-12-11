@@ -107,7 +107,8 @@ remove (const char *file) {
 
 int
 open (const char *file) {
-	return syscall1 (SYS_OPEN, file);
+	// printf("?\n");
+	return syscall1(SYS_OPEN, file);
 }
 
 int
@@ -147,12 +148,12 @@ dup2 (int oldfd, int newfd){
 
 void *
 mmap (void *addr, size_t length, int writable, int fd, off_t offset) {
-	return (void *) syscall5 (SYS_MMAP, addr, length, writable, fd, offset);
+	return (void *)syscall5(SYS_MMAP, addr, length, writable, fd, offset);
 }
 
 void
 munmap (void *addr) {
-	syscall1 (SYS_MUNMAP, addr);
+	syscall1(SYS_MUNMAP, addr);
 }
 
 bool
