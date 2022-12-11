@@ -55,6 +55,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 	ASSERT(VM_TYPE(type) != VM_UNINIT)
 
 	struct supplemental_page_table *spt = &thread_current()->spt;
+	// printf("[vm_alloc_page_with_initializer] writable %d:\n",writable);
 
 	/* Check wheter the upage is already occupied or not. */
 	if (spt_find_page(spt, upage) == NULL)
@@ -72,19 +73,18 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 			// printf("aux: %p\n", aux);
 			uninit_new(new_page, upage, init, type, aux, file_backed_initializer);
 		}
-		// else if (type == VM_MARKER_0){
-		// 	uninit_new(new_page, upage, init, type, aux, anon_initializer);
-		// }
 		else
 		{
 			// uninit_new(new_page, upage, init, type, aux, NULL);
 			goto err;
 		}
+		new_page->writable = writable;
 		/* TODO: Insert the page into the spt. */
 		if (spt_insert_page(spt, new_page) == false)
 		{
 			goto err;
 		}
+
 	}
 	return true;
 err:
@@ -389,7 +389,7 @@ bool vm_do_claim_page(struct page *page)
 	struct frame *frame = vm_get_frame();
 	int result = false;
 	struct thread *t = thread_current();
-	bool writable;
+	// bool writable;
 	// printf("===========vm_do_claim_page: start=============\n");
 	// printf("[vm_do_claim_page] tid: %d\n", thread_current()->tid);
 
@@ -398,23 +398,11 @@ bool vm_do_claim_page(struct page *page)
 	page->frame = frame;
 	// printf("type: %d\n", page->operations->type);
 
-	// struct uninit_page *uninit = &page->uninit;
-	// void *aux = uninit->aux;
-	// if (uninit->type == VM_FILE){
-	// 	struct file_info *aux_file_info = (struct file_info *)aux;
-	// 	printf("[1]")
-	// 	writable = aux_file_info->writable;
-	// 	printf("temp writable: %d\n", aux_file_info->writable);
-	// }
-	// else{
-	// 	writable = 1;
-	// }
+
 	/* TODO: Insert page table entry to map page's VA to frame's PA. */
 	// [3-1?] wr 세팅을 1로 하는게 맞나?
-
-	if (!install_page(page->va, frame->kva, 1))
+	if (!install_page(page->va, frame->kva, page->writable))
 	{
-		printf("실 패!\n");
 		return false;
 	}
 	// printf("pte: %p\n", *( (uint64_t *) page->va));
@@ -467,8 +455,6 @@ void supplemental_copy_entry(struct hash_elem *e, void *aux){
 	{
 		// printf("VM_UNINIT\n");
 		// printf("[spt entry] : uninit p kva: %p\n", p->frame->kva);
-
-		
 		vm_alloc_page_with_initializer(p->uninit.type, p->va, 1, lazy_load_segment, p->uninit.aux);
 	}
 	else if (p->operations->type == VM_ANON) {

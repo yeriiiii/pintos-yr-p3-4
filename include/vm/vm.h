@@ -63,6 +63,7 @@ struct page
 		struct page_cache page_cache;
 #endif
 	};
+	bool writable;
 };
 
 /* The representation of "frame" */
