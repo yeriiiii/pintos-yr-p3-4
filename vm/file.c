@@ -95,7 +95,7 @@ do_mmap (void *addr, size_t length, int writable,
 
 	void *origin_addr = addr;
 	uint32_t read_bytes = length;
-	uint32_t zero_bytes = (length==PGSIZE) ? 0 : PGSIZE - (length % PGSIZE);
+	uint32_t zero_bytes = (length%PGSIZE == 0) ? 0 : PGSIZE - (length % PGSIZE);
 	// printf("length: %d\n", length);
 	// printf("read bytes: %d\n", read_bytes);
 	// printf("zero bytes: %d\n", zero_bytes);

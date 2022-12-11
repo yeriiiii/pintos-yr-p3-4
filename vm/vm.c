@@ -135,7 +135,7 @@ bool spt_insert_page(struct supplemental_page_table *spt,
 void spt_remove_page(struct supplemental_page_table *spt, struct page *page)
 {
 	hash_delete(&spt->spt_hash, &page->h_elem);
-	vm_dealloc_page(page);
+	// vm_dealloc_page(page);
 }
 
 /* Get the struct frame, that will be evicted. */
@@ -479,13 +479,14 @@ void supplemental_copy_entry(struct hash_elem *e, void *aux){
 		vm_alloc_page(VM_FILE, p->va, 1);
 		// printf("[1]\n");
 		struct page *child_p = (struct page *)spt_find_page(&thread_current()->spt, p->va);
-		struct file_page *file_page = &child_p->file;
-		file_page->aux = temp;
 
 		// printf("[spt entry] : VM_FILE p aux: %p\n", temp->file);
 		// printf("[spt entry] : VM_FILE child p aux: %p\n", ((struct file_info *)(file_page->aux))->file);
 		// printf("[2]\n");
 		vm_claim_page(p->va);
+
+		struct file_page *file_page = &child_p->file;
+		file_page->aux = temp;
 		// printf("[3]\n");
 		memcpy(child_p->frame->kva, p->frame->kva, PGSIZE);
 		// printf("[4]\n");
