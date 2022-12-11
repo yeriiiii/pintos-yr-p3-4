@@ -95,7 +95,7 @@ do_mmap (void *addr, size_t length, int writable,
 
 	void *origin_addr = addr;
 	uint32_t read_bytes = length;
-	uint32_t zero_bytes = (length==PGSIZE) ? 0 : PGSIZE - (length % PGSIZE);
+	uint32_t zero_bytes = (length%PGSIZE == 0) ? 0 : PGSIZE - (length % PGSIZE);
 	// printf("length: %d\n", length);
 	// printf("read bytes: %d\n", read_bytes);
 	// printf("zero bytes: %d\n", zero_bytes);
@@ -226,40 +226,3 @@ do_munmap (void *addr) {
 	}
 
 }
-
-// void do_munmap(void *addr)
-// {
-// 	while (true)
-// 	{
-// 		struct thread *curr = thread_current();
-// 		struct page *find_page = spt_find_page(&curr->spt, addr);
-// 		struct frame *find_frame = find_page->frame;
-// 		printf("addr in munmap = %p\n", addr);
-// 		if (find_page == NULL)
-// 		{
-// 			return NULL;
-// 		}
-
-// 		// // 연결 해제
-// 		// find_page->frame = NULL;
-// 		// find_frame->page = NULL;
-
-// 		struct file_info *container = (struct file_info *)find_page->uninit.aux;
-// 		// 페이지의 dirty bit이 1이면 true를, 0이면 false를 리턴한다.
-// 		if (pml4_is_dirty(&curr->pml4, find_page->va) == true)
-// 		{
-// 			// 물리 프레임에 변경된 데이터를 다시 디스크 파일에 업데이트 buffer에 있는 데이터를 size만큼, file의 file_ofs부터 써준다.
-// 			file_write_at(container->file, addr, container->read_bytes, container->offset);
-// 			// dirty bit = 0
-// 			// 인자로 받은 dirty의 값이 1이면 page의 dirty bit을 1로, 0이면 0으로 변경해준다.
-// 			pml4_set_dirty(curr->pml4, find_page->va, 0);
-// 		}
-// 		// dirty bit = 0
-// 		// 인자로 받은 dirty의 값이 1이면 page의 dirty bit을 1로, 0이면 0으로 변경해준다.
-
-// 		// present bit = 0
-// 		// 페이지의 present bit 값을 0으로 만들어주는 함수
-// 		pml4_clear_page(curr->pml4, find_page->va);
-// 		addr += PGSIZE;
-// 	}
-// }
