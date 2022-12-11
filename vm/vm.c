@@ -154,7 +154,7 @@ vm_get_victim(void)
 		clock pointer 옮기기
 	}*/
 
-	// lock_acquire(&lru_list_lock);
+	lock_acquire(&lru_list_lock);
 
 	if (lru_clock == NULL){
 		lru_clock = list_begin(&lru_list);
@@ -213,7 +213,7 @@ vm_get_victim(void)
 	goto done;
 
 done:
-	// lock_release(&lru_list_lock);
+	lock_release(&lru_list_lock);
 	// printf("victim: %p\n", victim);
 
 	return victim;
@@ -272,10 +272,10 @@ vm_get_frame(void)
 	}
 	frame->thread = thread_current();
 
-	// lock_acquire(&lru_list_lock);
+	lock_acquire(&lru_list_lock);
 	list_push_back(&lru_list, &frame->lru);
 	// [3-1?] 다른 멤버들 초기화 필요? (operations, union)
-	// lock_release(&lru_list_lock);
+	lock_release(&lru_list_lock);
 
 	ASSERT(frame != NULL);
 	ASSERT(frame->page == NULL);
