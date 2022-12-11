@@ -69,7 +69,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 		} //[3-1?] ??
 		else if (type == VM_FILE)
 		{
-			// printf("aux: %p\n", aux);
+			// printf("[vm_alloc_page_with_initializer] VM_FILE init: %p\n", init);
 			uninit_new(new_page, upage, init, type, aux, file_backed_initializer);
 		}
 		// else if (type == VM_MARKER_0){
@@ -386,6 +386,7 @@ bool vm_claim_page(void *va UNUSED)
 bool vm_do_claim_page(struct page *page)
 {
 	struct frame *frame = vm_get_frame();
+	// printf("[vm_do_claim_page] : VM_FILE child p kva: %p\n", frame->kva);
 	int result = false;
 	struct thread *t = thread_current();
 	bool writable;
@@ -413,7 +414,7 @@ bool vm_do_claim_page(struct page *page)
 
 	if (!install_page(page->va, frame->kva, 1))
 	{
-		printf("실 패!\n");
+		// printf("실 패!\n");
 		return false;
 	}
 	// printf("pte: %p\n", *( (uint64_t *) page->va));
@@ -475,7 +476,8 @@ void supplemental_copy_entry(struct hash_elem *e, void *aux){
 		vm_alloc_page(VM_ANON, p->va, 1);
 		struct page *child_p = spt_find_page(&thread_current()->spt, p->va);
 		
-		vm_claim_page(p->va);
+		//vm_claim_page(p->va)
+		vm_do_claim_page(child_p);
 		// printf("[spt entry] : vm_anon p kva: %p\n", p->frame->kva);
 		// printf("[spt entry] p va: %p\n", p->frame->page->va);
 		// printf("[spt entry] child_p kva: %p\n", child_p->frame->kva);
@@ -487,18 +489,24 @@ void supplemental_copy_entry(struct hash_elem *e, void *aux){
 	}
 	else if (p->operations->type == VM_FILE){
 		// printf("VM_FILE\n");
-		// printf("[spt entry] : VM_FILE p kva: %p\n", p->frame->kva);
+		// printf("[spt copy] VM_FILE : p va: %p\n", p->va);
 		struct file_info *temp = (struct file_info *) p->file.aux;
+
 		vm_alloc_page(VM_FILE, p->va, 1);
-		// printf("[1]\n");
+
 		struct page *child_p = (struct page *)spt_find_page(&thread_current()->spt, p->va);
+
+		// printf("[spt copy] : VM_FILE p aux: %p\n", temp->file);
+		// printf("[spt copy] : VM_FILE child p aux: %p\n", ((struct file_info *)(file_page->aux))->file);
+
+		// printf("[2]\n");
+		// vm_claim_page(p->va);
+		// printf("[spt copy] : VM_FILE p kva: %p\n", p->frame->kva);
+		vm_do_claim_page(child_p);
+
 		struct file_page *file_page = &child_p->file;
 		file_page->aux = temp;
 
-		// printf("[spt entry] : VM_FILE p aux: %p\n", temp->file);
-		// printf("[spt entry] : VM_FILE child p aux: %p\n", ((struct file_info *)(file_page->aux))->file);
-		// printf("[2]\n");
-		vm_claim_page(p->va);
 		// printf("[3]\n");
 		memcpy(child_p->frame->kva, p->frame->kva, PGSIZE);
 		// printf("[4]\n");
