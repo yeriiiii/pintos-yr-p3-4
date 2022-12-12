@@ -29,7 +29,7 @@ void vm_anon_init(void)
 	// swap disk = 4 MB, 1 swap slot = 4KB
 	// swap disk = 1000 swap slot
 	// SECTORS_PER_PAGE = 8 sector = 4096 (bytes) / 512 (bytes/sector)
-	lock_init(&swap_table_lock);
+	// lock_init(&swap_table_lock);
 	disk_sector_t SECTORS_PER_PAGE = 4096 / DISK_SECTOR_SIZE;
 	size_t swap_slot_num = disk_size(swap_disk) / SECTORS_PER_PAGE;
 	// printf("disk_size: %d\n", disk_size(swap_disk)); = 8064
@@ -66,9 +66,9 @@ anon_swap_in(struct page *page, void *kva)
 	for (int i = 0; i < 8; i++)
 		disk_read(swap_disk, sector_idx + i, page->frame->kva + (i*512));
 
-	lock_acquire(&swap_table_lock);
+	// lock_acquire(&swap_table_lock);
 	bitmap_set(swap_table, idx, 0);
-	lock_release(&swap_table_lock);
+	// lock_release(&swap_table_lock);
 
 	return true;
 }
@@ -81,7 +81,7 @@ anon_swap_out(struct page *page)
 	struct thread *page_owner = page->frame->thread;
 
 	// printf("anon swap out\n");
-	lock_acquire(&swap_table_lock);
+	// lock_acquire(&swap_table_lock);
 	size_t idx = bitmap_scan(swap_table, 0, 1, 0);
 	if (idx==BITMAP_ERROR){
 		PANIC("스왑 디스크가 꽉 찼습니다\n");
@@ -94,7 +94,7 @@ anon_swap_out(struct page *page)
 	
 	pml4_clear_page(page_owner->pml4, page->va, 0);
 	bitmap_set(swap_table, idx, 1);
-	lock_release(&swap_table_lock);
+	// lock_release(&swap_table_lock);
 	return true;
 }
 

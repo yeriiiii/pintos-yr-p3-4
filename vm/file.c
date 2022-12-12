@@ -4,6 +4,7 @@
 #include "threads/vaddr.h"
 #include "userprog/process.h"
 #include "filesys/file.h"
+#include "userprog/syscall.h"
 
 static bool file_backed_swap_in (struct page *page, void *kva);
 static bool file_backed_swap_out (struct page *page);
@@ -50,8 +51,9 @@ file_backed_swap_in (struct page *page, void *kva) {
 	// printf("aux->read_bytes: %x\n", aux->read_bytes);
 	// printf("aux->zero_bytes: %x\n", aux->zero_bytes);
 	// printf("aux->offset: %x\n", aux->offset);
-
+	// lock_acquire(&filesys_lock);
 	int result = file_read_at(aux->file, page->frame->kva, aux->read_bytes, aux->offset);
+	// lock_release(&filesys_lock);
 	// printf("result: %d\n", result);
 	if (result != (int)aux->read_bytes)
 	{
@@ -73,7 +75,9 @@ file_backed_swap_out (struct page *page) {
 	struct file_info *aux = &page->file.aux;
 
 	if (pml4_is_dirty(page_owner->pml4, page->va)){
+		// lock_acquire(&filesys_lock);
 		file_write_at(aux->file, page->va, aux->read_bytes, aux->offset);
+		// lock_release(&filesys_lock);
 		pml4_set_dirty(page_owner->pml4, page->va, 0);
 	}
 	pml4_clear_page(page_owner->pml4, page->va);
@@ -207,7 +211,9 @@ do_munmap (void *addr) {
 				if (pml4_is_dirty(cur->pml4, p->va))
 				{
 					// printf("[6]\n");
+					// lock_acquire(&filesys_lock);
 					file_write_at(e_file->file, p->va, aux->read_bytes, aux->offset);
+					// lock_release(&filesys_lock);
 					pml4_set_dirty(cur->pml4, p->va, 0);
 				}
 				// printf("[7]\n");
@@ -220,9 +226,10 @@ do_munmap (void *addr) {
 				
 			}
 			// printf("탈출!\n");
-
+			file_close(e_file->file);
+			list_remove(e);
 			return;
 		}
+		e = list_next(e);
 	}
-
 }

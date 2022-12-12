@@ -79,6 +79,7 @@ bool vm_alloc_page_with_initializer(enum vm_type type, void *upage, bool writabl
 			goto err;
 		}
 		new_page->writable = writable;
+		new_page->cow = 0;
 		/* TODO: Insert the page into the spt. */
 		if (spt_insert_page(spt, new_page) == false)
 		{
@@ -260,7 +261,7 @@ vm_get_frame(void)
 	{
 		// printf("이제 frame이 없어유\n");
 		frame = vm_evict_frame();
-		if (frame ==NULL)
+		if (frame == NULL)
 			PANIC("todo"); // 쫓아낼 프레임도 없으면 패닉
 	}
 	else
@@ -272,10 +273,10 @@ vm_get_frame(void)
 	}
 	frame->thread = thread_current();
 
-	lock_acquire(&lru_list_lock);
+	// lock_acquire(&lru_list_lock);
 	list_push_back(&lru_list, &frame->lru);
 	// [3-1?] 다른 멤버들 초기화 필요? (operations, union)
-	lock_release(&lru_list_lock);
+	// lock_release(&lru_list_lock);
 
 	ASSERT(frame != NULL);
 	ASSERT(frame->page == NULL);
@@ -302,11 +303,7 @@ vm_handle_wp(struct page *page UNUSED)
 
 	memcpy(new_f->kva, old_f->kva, PGSIZE);
 
-	// printf("new kva: %p\n", new_f->kva);
-	// printf("old kva: %p\n", old_f->kva);
-
-
-	page->writable = 1;
+	// page->writable = 1;
 	page->frame = new_f;
 	page->cow = 0;
 	new_f->page = page;
@@ -345,9 +342,10 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	if ((!is_user_vaddr(addr)) || (addr == NULL))
 	{
 		// printf("찐폴트\n");
-		exit(-1);
+		return false;
 	}
- 
+
+	/* STACK GROWTH */
 	void *rsp;
 	if (user == 1)
 		rsp = (void *)f->rsp;
@@ -366,26 +364,18 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	if (fault_p == NULL)
 	{
 		// printf("페이지 어딧지 \n");
-		exit(-1);
+		return false;
 	}
 
-	// printf("write: %d\n", write);
-	// printf("p->cow: %d\n", fault_p->cow);
-
-	/* STACK GROWTH */
-
-
 	/* write protected page : Copy on Write */
-	if (write == 1 && fault_p->cow == 1)
+	if (write && !not_present && (fault_p->cow == 1))
 	{
 		bool result = vm_handle_wp(fault_p);
 		// printf("write_protected_page, handling complete: %d\n", result);
 		return result;
 	}
 
-
-
-	return vm_claim_page(addr);
+	return vm_do_claim_page(fault_p);
 
 }
 
@@ -491,30 +481,15 @@ void supplemental_copy_entry(struct hash_elem *e, void *aux){
 
 	if (parent_type== VM_UNINIT)
 	{
-		// printf("VM_UNINIT\n");
-		// printf("[spt entry] : uninit p kva: %p\n", p->frame->kva);
 		vm_alloc_page_with_initializer(p->uninit.type, p->va, p->writable, lazy_load_segment, p->uninit.aux);
-		// child_p = (struct page *)spt_find_page(&thread_current()->spt, p->va);
-		// printf("child_p->va: %d\n", child_p->va);
-
-		// child_p->cow = child_cow;
 	}
 	else{
 		struct page *child_p = (struct page *)malloc(sizeof(struct page));
 		memcpy(child_p, p, sizeof(struct page));
-
 		spt_insert_page(&thread_current()->spt, child_p);
-
-		// if (parent_type == VM_ANON){
-		// 	anon_initializer(child_p, VM_ANON, p->frame->kva);
-		// }
-		// else if (parent_type == VM_FILE){
-		// 	file_backed_initializer(child_p, VM_FILE, p->frame->kva);
-		// }
-
 		pml4_set_page(thread_current()->pml4, child_p->va, p->frame->kva, 0);
 
-		child_p->writable = p->writable;
+		// child_p->writable = p->writable;
 		child_p->cow = p->writable;
 	}
 
@@ -537,5 +512,5 @@ void supplemental_destroy_entry(struct hash_elem *e, void *aux)
 	if (p->operations->type == VM_FILE){
 		do_munmap(p->va);
 	}
-	//spt_remove_page(&thread_current()->spt,p);
+	spt_remove_page(&thread_current()->spt,p);
 }
