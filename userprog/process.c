@@ -19,6 +19,7 @@
 #include "threads/vaddr.h"
 #include "intrinsic.h"
 #include "threads/synch.h"
+#include "userprog/syscall.h"
 #ifdef VM
 #include "vm/vm.h"
 #endif
@@ -27,12 +28,13 @@ static void process_cleanup (void);
 static bool load (const char *file_name, struct intr_frame *if_);
 static void initd (void *f_name);
 static void __do_fork (void *);
-//void argument_stack(char **token, int count, struct intr_frame *if_);
 
+// void argument_stack(char **token, int count, struct intr_frame *if_);
 
 /* General process initializer for initd and other process. */
 static void
-process_init (void) {
+process_init(void)
+{
 	struct thread *current = thread_current ();
 }
 
@@ -221,6 +223,7 @@ __do_fork (void *aux) {
 	}
 error:
 	current->exit_status = TID_ERROR;
+	// printf("ERROR\n");
 	sema_up(&current->fork_sema);
 	exit(TID_ERROR);
 }
@@ -450,17 +453,18 @@ load(const char *file_name, struct intr_frame *if_)
 	process_activate(t);
 
 	/* 락 획득 */
-	// lock_acquire(&file_lock);
+	lock_acquire(&filesys_lock);
 	/* Open executable file. */
 	file = filesys_open(file_name);
+	lock_release(&filesys_lock);
 	if (file == NULL)
 	{
 		/* 락 해제 */
-		// lock_release(&file_lock);
 		printf("load: %s: open failed\n", file_name);
 		goto done;
 		// exit(-1);
 	}
+	
 
 	/* thread 구조체의 run_file을 현재 실행할 파일로 초기화 */
 	t->running = file;
@@ -471,12 +475,16 @@ load(const char *file_name, struct intr_frame *if_)
 	// lock_release(&file_lock);
 
 	/* Read and verify executable header. */
+	lock_acquire(&filesys_lock);
 	if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\2\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 0x3E // amd64
 		|| ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Phdr) || ehdr.e_phnum > 1024)
 	{
+		lock_release(&filesys_lock);
 		printf("load: %s: error loading executable\n", file_name);
 		goto done;
 	}
+
+	lock_release(&filesys_lock);
 
 	/* Read program headers. */
 	file_ofs = ehdr.e_phoff;
@@ -488,8 +496,12 @@ load(const char *file_name, struct intr_frame *if_)
 			goto done;
 		file_seek(file, file_ofs);
 
-		if (file_read(file, &phdr, sizeof phdr) != sizeof phdr)
+		lock_acquire(&filesys_lock);
+		if (file_read(file, &phdr, sizeof phdr) != sizeof phdr){
+			lock_release(&filesys_lock);
 			goto done;
+		}
+		lock_release(&filesys_lock);
 		file_ofs += sizeof phdr;
 		switch (phdr.p_type)
 		{
@@ -552,6 +564,7 @@ load(const char *file_name, struct intr_frame *if_)
 done:
 	/* We arrive here whether the load is successful or not. */
 	// file_close(file); // file 닫히면서 lock이 풀림
+	
 				
 	return success;
 }
@@ -767,7 +780,9 @@ lazy_load_segment (struct page *page, void *aux) {
 	// printf("aux_file_info->read_bytes: %d\n", aux_file_info->read_bytes);
 	// printf("aux_file_info->zero_bytes: %d\n", aux_file_info->zero_bytes);
 	// printf("aux_file_info->offset: %d\n", aux_file_info->offset);
+	// lock_acquire(&filesys_lock);
 	int result = file_read(aux_file_info->file, page->frame->kva, aux_file_info->read_bytes);
+	// lock_release(&filesys_lock);
 	// printf("result: %d\n", result);
 
 	if ( result != (int)aux_file_info->read_bytes)

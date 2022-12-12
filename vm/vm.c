@@ -367,6 +367,10 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 		return false;
 	}
 
+	if(!fault_p->writable && write){
+		return false;
+	}
+
 	/* write protected page : Copy on Write */
 	if (write && !not_present && (fault_p->cow == 1))
 	{
@@ -486,6 +490,7 @@ void supplemental_copy_entry(struct hash_elem *e, void *aux){
 	else{
 		struct page *child_p = (struct page *)malloc(sizeof(struct page));
 		memcpy(child_p, p, sizeof(struct page));
+
 		spt_insert_page(&thread_current()->spt, child_p);
 		pml4_set_page(thread_current()->pml4, child_p->va, p->frame->kva, 0);
 
@@ -509,8 +514,18 @@ void supplemental_page_table_kill(struct supplemental_page_table *spt UNUSED)
 void supplemental_destroy_entry(struct hash_elem *e, void *aux)
 {
 	struct page *p = hash_entry(e, struct page, h_elem);
-	if (p->operations->type == VM_FILE){
+	struct frame *f = p->frame;
+	if (p->operations->type == VM_FILE)
+	{
 		do_munmap(p->va);
 	}
-	spt_remove_page(&thread_current()->spt,p);
+	// if (f){
+	// 	if (p->cow == 0){
+	// 		// lru_clock = list_next(lru_clock);
+	// 		list_remove(&f->lru);
+	// 		// palloc_free_page(f->kva);
+	// 		// free(f);
+	// 	}
+	// }
+	// spt_remove_page(&thread_current()->spt,p);
 }

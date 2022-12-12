@@ -68,7 +68,7 @@ void check_valid_buffer(void* buffer, unsigned size, void* rsp, bool to_write);
 	write_msr(MSR_SYSCALL_MASK,
 			FLAG_IF | FLAG_TF | FLAG_DF | FLAG_IOPL | FLAG_AC | FLAG_NT);
 	lock_init (&filesys_lock);
-}
+	}
 
 /* The main system call interface */
 void
@@ -211,6 +211,7 @@ int open (const char *file){
 	// printf("hi!\n");
 	lock_acquire(&filesys_lock);
 	struct file *open_file = filesys_open(file); // 파일 오픈 및 파일 명 지정
+	lock_release(&filesys_lock);
 	if (open_file == NULL){ // 오픈 파일 명 값 확인
 		return -1;
 	}	
@@ -218,7 +219,7 @@ int open (const char *file){
 	if (open_file_fd == -1){			//실패시
 		file_close(open_file);	 // 파일 닫기
 	} 
-	lock_release(&filesys_lock);
+	
 	return open_file_fd;	 // 성공시 fd값 리턴
 	// 파일을 열 때 사용하는 시스템 콜
 	// 성공 시 fd를 생성하고 반환, 실패 시 -1 반환
@@ -400,7 +401,9 @@ void *mmap(void *addr, size_t length, int writable, int fd, off_t offset)
 		// 	// printf("NULL\n");
 		// 	return NULL;
 		// }
+		lock_acquire(&filesys_lock);
 		struct file *map_file = file_reopen(process_get_file(fd));
+		lock_release(&filesys_lock);
 		void *mmap_addr = do_mmap(addr, file_size, writable, map_file, offset); // file size 수정
 		// printf("mmap addr: %p\n", mmap_addr);
 		return mmap_addr;
@@ -412,6 +415,7 @@ void munmap(void *addr)
 {
 
 	do_munmap(addr);
+	
 
 	// if (spt_find_page(&thread_current()->spt, addr) != NULL){
 	// printf("문맵~2\n");
