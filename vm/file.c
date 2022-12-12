@@ -214,7 +214,7 @@ do_munmap (void *addr) {
 				pml4_clear_page(cur->pml4, p->va);
 				// printf("[8]\n");
 				struct page *before_p = p;
-				pe = list_next(pe);
+				pe = list_remove(pe);
 				spt_remove_page(&cur->spt, before_p);
 				// printf("[9]\n");
 				

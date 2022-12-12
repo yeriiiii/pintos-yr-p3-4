@@ -292,7 +292,7 @@ process_wait (tid_t child_tid UNUSED) {
 /* Exit the process. This function is called by thread_exit (). */
 void
 process_exit (void) {
-	printf("exit 시작\n");
+	// printf("exit 시작\n");
 	struct thread *curr = thread_current();
 	/* TODO: Your code goes here.
 	 * TODO: Implement process termination message (see
@@ -305,9 +305,9 @@ process_exit (void) {
 
 	sema_up(&curr->wait_sema); // 종료되었다고 기다리고 있는 부모 thread에게 signal 보냄-> sema_up에서 val을 올려줌
 	/* [TBD] 수민이가 이거 올리면 exit 통과한댔는데 왜 안함 */
-	printf("process_clean_up 시작\n");
+	// printf("process_clean_up 시작\n");
 	process_cleanup(); // pml4를 날림(이 함수를 call 한 thread의 pml4)
-	printf("process_clean_up 끝\n");
+	// printf("process_clean_up 끝\n");
 
 	sema_down(&curr->free_sema); // 부모에게 exit_Status가 정확히 전달되었는지 확인(wait)
 	// printf("bi\n");
