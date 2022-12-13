@@ -155,7 +155,7 @@ vm_get_victim(void)
 		clock pointer 옮기기
 	}*/
 
-	lock_acquire(&lru_list_lock);
+	// lock_acquire(&lru_list_lock);
 
 	if (lru_clock == NULL){
 		lru_clock = list_begin(&lru_list);
@@ -214,7 +214,7 @@ vm_get_victim(void)
 	goto done;
 
 done:
-	lock_release(&lru_list_lock);
+	// lock_release(&lru_list_lock);
 	// printf("victim: %p\n", victim);
 
 	return victim;
@@ -273,10 +273,10 @@ vm_get_frame(void)
 	}
 	frame->thread = thread_current();
 
-	// lock_acquire(&lru_list_lock);
+	lock_acquire(&lru_list_lock);
 	list_push_back(&lru_list, &frame->lru);
 	// [3-1?] 다른 멤버들 초기화 필요? (operations, union)
-	// lock_release(&lru_list_lock);
+	lock_release(&lru_list_lock);
 
 	ASSERT(frame != NULL);
 	ASSERT(frame->page == NULL);
@@ -295,26 +295,29 @@ vm_stack_growth(void *addr UNUSED)
 static bool
 vm_handle_wp(struct page *page UNUSED)
 {
-	struct frame *old_f = page->frame;	
-	struct frame *new_f = vm_get_frame();
+	struct frame *old_kva = page->frame->kva;
+	// struct frame *new_kva = palloc_get_page(PAL_USER);
 
-	if (new_f==NULL)
-		return false;
 
-	memcpy(new_f->kva, old_f->kva, PGSIZE);
+	// if (new_kva==NULL)
+	// 	return false;
+
+	// page->frame->kva = new_kva;
+
+	struct frame *new_frame = vm_get_frame();
+	new_frame->page = page;
+	page->frame = new_frame;
+
+	memcpy(new_frame->kva, old_kva, PGSIZE);
 
 	// page->writable = 1;
-	page->frame = new_f;
 	page->cow = 0;
-	new_f->page = page;
 
 	// cow를 돌려놔야 하나?
-
 	// printf("page->va: %p\n", page->va);
-
 	// printf("pml4_get_page: %p\n", pml4_get_page(thread_current()->pml4, page->va));
 
-	return pml4_set_page(thread_current()->pml4, page->va, new_f->kva, 1);
+	return pml4_set_page(thread_current()->pml4, page->va, new_frame->kva, 1);
 }
 
 /* Return true on success */
@@ -470,35 +473,85 @@ uninit page를 할당하고 즉시 claim 해야함 */
 /* Copy supplemental page table from src to dst */
 bool supplemental_page_table_copy(struct supplemental_page_table *dst UNUSED, struct supplemental_page_table *src UNUSED){
 	// printf("copy 시작\n");
-	hash_apply(&src->spt_hash, supplemental_copy_entry);
+	// hash_apply(&src->spt_hash, supplemental_copy_entry);
 	// printf("copy 끝\n");
+	struct thread *curr = thread_current();
+	struct hash_iterator i;
+	struct hash *parent_hash = &src->spt_hash;
+
+	hash_first(&i, parent_hash);
+	while (hash_next(&i))
+	{    
+		struct page *parent_page = hash_entry(hash_cur(&i), struct page, h_elem);
+
+		if (parent_page->operations->type == VM_UNINIT)
+		{
+			vm_initializer *init = parent_page->uninit.init;
+			void *aux = parent_page->uninit.aux;
+
+			vm_alloc_page_with_initializer(parent_page->uninit.type, parent_page->va, parent_page->writable, init, aux);
+		}
+		else
+		{
+			struct page *child_page = (struct page *)malloc(sizeof(struct page));
+			memcpy(child_page, parent_page, sizeof(struct page));
+
+			if (!spt_insert_page(dst, child_page))
+				return false;
+
+			if (!pml4_set_page(curr->pml4, child_page->va, child_page->frame->kva, false))
+				return false;
+
+			// pml4_clear_page(parent_page->pml4, parent_page->va);
+			if (!pml4_set_page(parent_page->frame->thread->pml4, parent_page->va, parent_page->frame->kva, false))
+				return false;
+
+			// list_push_back(&child_page->frame->child_pages, &child_page->cow_elem);
+			child_page->cow = 1;
+			parent_page->cow = 1;
+			// child_page->frame->cow_cnt++;
+			// child_page->pml4 = curr->pml4;
+		}
+	}
+
 	return true;
 }
 
-void supplemental_copy_entry(struct hash_elem *e, void *aux){
-	// printf("entry\n");
+// void supplemental_copy_entry(struct hash_elem *e, void *aux){
+// 	// printf("entry\n");
 
-	struct page *p = hash_entry(e, struct page, h_elem);
-	struct page *child_p;
-	enum vm_type parent_type = p->operations->type;
-	// bool child_cow = p->writable;
+// 	struct page *p = hash_entry(e, struct page, h_elem);
+// 	struct page *child_p;
+// 	enum vm_type parent_type = p->operations->type;
+// 	// bool child_cow = p->writable;
 
-	if (parent_type== VM_UNINIT)
-	{
-		vm_alloc_page_with_initializer(p->uninit.type, p->va, p->writable, lazy_load_segment, p->uninit.aux);
-	}
-	else{
-		struct page *child_p = (struct page *)malloc(sizeof(struct page));
-		memcpy(child_p, p, sizeof(struct page));
+// 	if (parent_type== VM_UNINIT)
+// 	{
+// 		vm_initializer *init = p->uninit.init;
+// 		void *aux = p->uninit.aux;
+// 		vm_alloc_page_with_initializer(p->uninit.type, p->va, p->writable, init, aux);
+// 	}
+// 	else{
+// 		struct page *child_p = (struct page *)malloc(sizeof(struct page));
+// 		memcpy(child_p, p, sizeof(struct page));
+// 		struct frame *cpy_frame = (struct frame *)malloc(sizeof(struct frame));
+// 		child_p->frame = cpy_frame;
+// 		cpy_frame->kva = p->frame->kva;
+// 		cpy_frame->page = child_p;
+// 		cpy_frame->thread = thread_current();
 
-		spt_insert_page(&thread_current()->spt, child_p);
-		pml4_set_page(thread_current()->pml4, child_p->va, p->frame->kva, 0);
+// 		spt_insert_page(&thread_current()->spt, child_p);
+// 		pml4_set_page(thread_current()->pml4, child_p->va, cpy_frame->kva, 0);
 
-		// child_p->writable = p->writable;
-		child_p->cow = p->writable;
-	}
+// 		lock_acquire(&lru_list_lock);
+// 		list_push_back(&lru_list, &cpy_frame->lru);
+// 		lock_release(&lru_list_lock);
 
-}
+// 		// child_p->writable = p->writable;
+// 		child_p->cow = p->writable;
+		
+// 	}
+// }
 
 /* Project 3-2 Anonymous Page */
 /* Free the resource hold by the supplemental page table */
@@ -519,13 +572,15 @@ void supplemental_destroy_entry(struct hash_elem *e, void *aux)
 	{
 		do_munmap(p->va);
 	}
-	// if (f){
-	// 	if (p->cow == 0){
-	// 		// lru_clock = list_next(lru_clock);
-	// 		list_remove(&f->lru);
-	// 		// palloc_free_page(f->kva);
-	// 		// free(f);
-	// 	}
-	// }
+	if (f){
+		if (p->cow == 0){
+			// if (lru_clock = &f->lru){
+				// lru_clock = list_next(&f->lru);
+			
+			list_remove(&f->lru);
+			// palloc_free_page(f->kva);
+			// free(f);
+		}
+	}
 	// spt_remove_page(&thread_current()->spt,p);
 }
