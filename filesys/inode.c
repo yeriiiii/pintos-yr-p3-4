@@ -12,6 +12,8 @@
 
 /* On-disk inode.
  * Must be exactly DISK_SECTOR_SIZE bytes long. */
+/* 디스크에 있는 아이노드.
+* 정확히 DISK_SEOCTOR_SIZE 바이트 길이여야함*/
 struct inode_disk {
 	disk_sector_t start;                /* First data sector. */
 	off_t length;                       /* File size in bytes. */
@@ -40,6 +42,8 @@ struct inode {
  * INODE.
  * Returns -1 if INODE does not contain data for a byte at offset
  * POS. */
+/* INODE 내의 바이트 오프셋 POS를 포함하는 디스크 섹터를 반환합니다.
+* INODE에 오프셋 POS의 바이트에 대한 데이터가 포함되지 않은 경우 -1을 반환 */
 static disk_sector_t
 byte_to_sector (const struct inode *inode, off_t pos) {
 	ASSERT (inode != NULL);
@@ -179,6 +183,9 @@ inode_remove (struct inode *inode) {
 /* Reads SIZE bytes from INODE into BUFFER, starting at position OFFSET.
  * Returns the number of bytes actually read, which may be less
  * than SIZE if an error occurs or end of file is reached. */
+/* 위치 오프셋에서 시작하여 INODE에서 버퍼로 SIZE 바이트를 읽습니다.
+* 실제로 읽은 바이트 수를 반환합니다. 
+오류가 발생하거나 파일 끝에 도달한 경우 SIZE보다 작을 수 있습니다. */
 off_t
 inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset) {
 	uint8_t *buffer = buffer_;

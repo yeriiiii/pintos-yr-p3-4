@@ -21,8 +21,8 @@ struct fat_boot {
 struct fat_fs {
     struct fat_boot bs;
     unsigned int *fat;
-    unsigned int fat_length;
-    disk_sector_t data_start;
+    unsigned int fat_length; // 파일 시스템의 클러스터 수 
+    disk_sector_t data_start; // 파일이 들어있는 시작 섹터를 저장
     cluster_t last_clst;
     struct lock write_lock;
 };
@@ -43,13 +43,13 @@ fat_init (void) {
     unsigned int *bounce = malloc (DISK_SECTOR_SIZE);
     if (bounce == NULL)
         PANIC ("FAT init failed");
-    disk_read (filesys_disk, FAT_BOOT_SECTOR, bounce);
+    disk_read (filesys_disk, FAT_BOOT_SECTOR, bounce); // 두번째 인자(sec_no)를 첫번째 인자에서 세번째 인자로 읽음.
     memcpy (&fat_fs->bs, bounce, sizeof (fat_fs->bs));
     free (bounce);
 
     // Extract FAT info
     // FAT 정보 추출
-    if (fat_fs->bs.magic != FAT_MAGIC)
+    if (fat_fs->bs.magic != FAT_MAGIC) // FAT 디스크를 식별하는 매직 문자열이 아니면
         fat_boot_create ();
     fat_fs_init ();
 }
@@ -76,10 +76,10 @@ fat_open (void) {
             uint8_t *bounce = malloc (DISK_SECTOR_SIZE);
             if (bounce == NULL)
                 PANIC ("FAT load failed");
-            disk_read (filesys_disk, fat_fs->bs.fat_start + i, bounce);
-            memcpy (buffer + bytes_read, bounce, bytes_left);
-            bytes_read += bytes_left;
-            free (bounce);
+            disk_read (filesys_disk, fat_fs->bs.fat_start + i, bounce); // 두번째 인자(sec_no)를 첫번째 인자에서 세번째 인자로 읽음.
+            memcpy (buffer + bytes_read, bounce, bytes_left); // 디스크에서 읽은 것을 buffer+bytes_read로 복사 (dest, source, num)
+            bytes_read += bytes_left; // 읽은 만큼 추가 
+            free (bounce); // bounce buffer 프리
         }
     }
 }
@@ -149,7 +149,7 @@ fat_boot_create (void) {
         / (DISK_SECTOR_SIZE / sizeof (cluster_t) * SECTORS_PER_CLUSTER + 1) + 1;
     fat_fs->bs = (struct fat_boot){
         .magic = FAT_MAGIC,
-        .sectors_per_cluster = SECTORS_PER_CLUSTER,
+        .sectors_per_cluster = SECTORS_PER_CLUSTER,        
         .total_sectors = disk_size (filesys_disk),
         .fat_start = 1,
         .fat_sectors = fat_sectors,
