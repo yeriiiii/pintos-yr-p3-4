@@ -68,6 +68,10 @@ inode_init (void) {
  * disk.
  * Returns true if successful.
  * Returns false if memory or disk allocation fails. */
+/* 데이터의 길이 바이트로 inode를 초기화합니다.
+* 파일 시스템 디스크의 섹터에 새 inode를 씁니다.
+* 성공하면 true를 반환합니다.
+* 메모리 또는 디스크 할당에 실패하면 false를 반환합니다. */
 bool
 inode_create (disk_sector_t sector, off_t length) {
 	struct inode_disk *disk_inode = NULL;
@@ -77,6 +81,7 @@ inode_create (disk_sector_t sector, off_t length) {
 
 	/* If this assertion fails, the inode structure is not exactly
 	 * one sector in size, and you should fix that. */
+	/* 실패하면, 아이노드 구조는 정확히 한 섹터 크기가 아니며, 당신은 그것을 수정해야 한다.*/
 	ASSERT (sizeof *disk_inode == DISK_SECTOR_SIZE);
 
 	disk_inode = calloc (1, sizeof *disk_inode);
@@ -84,17 +89,17 @@ inode_create (disk_sector_t sector, off_t length) {
 		size_t sectors = bytes_to_sectors (length);
 		disk_inode->length = length;
 		disk_inode->magic = INODE_MAGIC;
-		if (free_map_allocate (sectors, &disk_inode->start)) {
-			disk_write (filesys_disk, sector, disk_inode);
-			if (sectors > 0) {
-				static char zeros[DISK_SECTOR_SIZE];
-				size_t i;
+		// if (free_map_allocate (sectors, &disk_inode->start)) {
+		disk_write (filesys_disk, sector, disk_inode);
+			// if (sectors > 0) {
+			// 	static char zeros[DISK_SECTOR_SIZE];
+			// 	size_t i;
 
-				for (i = 0; i < sectors; i++) 
-					disk_write (filesys_disk, disk_inode->start + i, zeros); 
-			}
-			success = true; 
-		} 
+			// 	for (i = 0; i < sectors; i++) 
+			// 		disk_write (filesys_disk, disk_inode->start + i, zeros); 
+			// }
+		success = true; 
+		// } 
 		free (disk_inode);
 	}
 	return success;
@@ -184,8 +189,8 @@ inode_remove (struct inode *inode) {
  * Returns the number of bytes actually read, which may be less
  * than SIZE if an error occurs or end of file is reached. */
 /* 위치 오프셋에서 시작하여 INODE에서 버퍼로 SIZE 바이트를 읽습니다.
-* 실제로 읽은 바이트 수를 반환합니다. 
-오류가 발생하거나 파일 끝에 도달한 경우 SIZE보다 작을 수 있습니다. */
+   실제로 읽은 바이트 수를 반환합니다. 
+   오류가 발생하거나 파일 끝에 도달한 경우 SIZE보다 작을 수 있습니다. */
 off_t
 inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset) {
 	uint8_t *buffer = buffer_;
@@ -237,6 +242,9 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset) {
  * less than SIZE if end of file is reached or an error occurs.
  * (Normally a write at end of file would extend the inode, but
  * growth is not yet implemented.) */
+/* 버퍼에서 INODE로 오프셋부터 SIZE 바이트 쓰기.
+*  실제로 쓴 바이트 수를 반환합니다. 파일 끝에 도달하거나 오류가 발생할 경우 SIZE보다 작을 수 있습니다.
+* (일반적으로 파일 끝에 쓰기는 아이노드를 확장하지만, 성장은 아직 구현되지 않았다.) */
 off_t
 inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		off_t offset) {
@@ -276,6 +284,8 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 			/* If the sector contains data before or after the chunk
 			   we're writing, then we need to read in the sector
 			   first.  Otherwise we start with a sector of all zeros. */
+			/* 만약 섹터가 우리가 쓰고 있는 청크의 앞이나 뒤에 데이터를 포함하고 있다면, 우리는 먼저 섹터에서 읽을 필요가 있다.
+			   그렇지 않으면 모든 0의 섹터로 시작 */
 			if (sector_ofs > 0 || chunk_size < sector_left) 
 				disk_read (filesys_disk, sector_idx, bounce);
 			else
