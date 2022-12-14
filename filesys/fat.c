@@ -132,9 +132,6 @@ fat_create (void) {
 
     // Set up ROOT_DIR_CLST
     fat_put (ROOT_DIR_CLUSTER, EOChain);
-    #ifdef EFILESYS
-    fat_put (FREE_MAP_SECTOR, EOChain); // 왜 안해준거지?!
-    #endif
 
     // Fill up ROOT_DIR_CLUSTER region with 0
     // ROOT_DIR_CLUSTER 영역을 0으로 채움
@@ -235,7 +232,7 @@ fat_put (cluster_t clst, cluster_t val) {
     FAT의 각 엔트리가 체인의 다음 클러스터를 가리키므로, (존재하는 경우; 그렇지 않다면 EOChain) 
     이는 연결을 업데이트하는데 사용할 수 있습니다.  */
     unsigned int *fat= fat_fs->fat;
-    fat[clst] = val;
+    fat[clst-1] = val;
 }
 
 /* Fetch a value in the FAT table. */
@@ -244,7 +241,7 @@ cluster_t
 fat_get (cluster_t clst) {
     /* 주어진 클러스터 clst 가 가리키는 클러스터 번호를 반환합니다. */
     unsigned int *fat= fat_fs->fat;
-    return fat[clst];
+    return fat[clst-1];
 }
 
 /* Covert a cluster # to a sector number. */
@@ -253,6 +250,6 @@ disk_sector_t
 cluster_to_sector (cluster_t clst) {
     /* 클러스터 번호 clst를 해당하는 섹터 번호로 변환하고, 반환합니다.*/
     // 157 + clst 
-    return fat_fs->data_start + clst;
+    return fat_fs->bs.fat_sectors + clst;
 }
 

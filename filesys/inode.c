@@ -257,21 +257,25 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 	while (size > 0) {
 		/* Sector to write, starting byte offset within sector. */
+		// 쓸 섹터, 섹터 내 시작 바이트 오프셋
 		disk_sector_t sector_idx = byte_to_sector (inode, offset);
 		int sector_ofs = offset % DISK_SECTOR_SIZE;
 
 		/* Bytes left in inode, bytes left in sector, lesser of the two. */
+		// 아이노드에 남은 바이트, 섹터에 남은 바이트, 둘 중 더 작은 바이트.
 		off_t inode_left = inode_length (inode) - offset;
 		int sector_left = DISK_SECTOR_SIZE - sector_ofs;
 		int min_left = inode_left < sector_left ? inode_left : sector_left;
 
 		/* Number of bytes to actually write into this sector. */
+		// 이 섹터에 실제로 쓸 바이트 수
 		int chunk_size = size < min_left ? size : min_left;
 		if (chunk_size <= 0)
 			break;
 
 		if (sector_ofs == 0 && chunk_size == DISK_SECTOR_SIZE) {
 			/* Write full sector directly to disk. */
+			// 전체 섹터를 디스크에 직접 기록
 			disk_write (filesys_disk, sector_idx, buffer + bytes_written); 
 		} else {
 			/* We need a bounce buffer. */
