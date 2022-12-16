@@ -80,51 +80,43 @@ void inode_init(void)
 bool inode_create(disk_sector_t sector, off_t length)
 {
 	struct inode_disk *disk_inode = NULL;
-	cluster_t start_clst;
 	bool success = false;
 
 	ASSERT(length >= 0);
+
+	/* If this assertion fails, the inode structure is not exactly
+	 * one sector in size, and you should fix that. */
 	ASSERT(sizeof *disk_inode == DISK_SECTOR_SIZE);
 
-	/* create disk_node and initialize*/
 	disk_inode = calloc(1, sizeof *disk_inode);
 	if (disk_inode != NULL)
 	{
-		size_t sectors = bytes_to_sectors(length);
+		size_t sectors = bytes_to_sectors(length); // 주어진 파일 길이를 위한 섹터 수를 계산
 		disk_inode->length = length;
 		disk_inode->magic = INODE_MAGIC;
 
-		/* data cluster allocation */
-		if (start_clst = fat_create_chain(0))
+		cluster_t cur = 0;
+		static char zeros[DISK_SECTOR_SIZE];
+
+		for (size_t i = 0; i < sectors; i++)
 		{
-			disk_inode->start = cluster_to_sector(start_clst);
-
-			/* write disk_inode on disk */
-			disk_write(filesys_disk, sector, disk_inode);
-
-			if (sectors > 0)
-			{
-				static char zeros[DISK_SECTOR_SIZE];
-				cluster_t target = start_clst;
-				disk_sector_t w_sector;
-				size_t i;
-
-				/* make cluster chain based length and initialize zero*/
-				while (sectors > 0)
-				{
-					w_sector = cluster_to_sector(target);
-					disk_write(filesys_disk, w_sector, zeros);
-
-					target = fat_create_chain(target);
-					sectors--;
-				}
+			if (cur == 0){
+				cur = fat_create_chain(0); // 새로운 체인 만들기
+				disk_inode->start = cluster_to_sector(cur); // 체인의 시작점 저장하기
 			}
-			success = true;
+			else
+				cur = fat_create_chain(cur);
+
+			disk_write(filesys_disk, cluster_to_sector(cur), zeros);
 		}
+		disk_write(filesys_disk, sector, disk_inode); // 디스크에 아이노드 내용 기록하기
+		success = true;
+
 		free(disk_inode);
 	}
 	return success;
 }
+
 
 /* Reads an inode from SECTOR
  * and returns a `struct inode' that contains it.
