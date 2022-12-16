@@ -86,28 +86,20 @@ initd (void *f_name) {
 tid_t
 process_fork (const char *name, struct intr_frame *if_ UNUSED) {
 	/* Clone current thread to new thread.*/
-	// printf("----------process_fork 시작---------\n");
 	struct thread *parent_thread = thread_current();
 	memcpy(&parent_thread->parent_if, if_, sizeof(struct intr_frame)); // kernel stack에 있는 intr_frame을 부모 스레드의 intr_frame에 복사
-	// printf("----------process_fork : memcpy---------\n");
 	//hex_dump(if_->rsp, if_->rsp, USER_STACK - if_->rsp, true);
 	tid_t new_tid = thread_create (name, PRI_DEFAULT, __do_fork, parent_thread); // 새로운 스레드 생성
-	// printf("----------process_fork : thread_create---------\n");
 
 	if (new_tid == TID_ERROR) {
-		// printf("----------process_fork : tid error---------\n");
 		return TID_ERROR;
 	}
 
 	struct thread *child_thread = get_child_process(new_tid);
-	// printf("----------process_fork : get_child---------\n");
 	sema_down(&child_thread->fork_sema);
-	// printf("----------process_fork : fork sema down---------\n");
 	if (child_thread->exit_status == -1) {
-		// printf("----------process_fork : tid error---------\n");
 		return TID_ERROR;
 	}
-	// printf("----------process_fork 끝 : new_tid : %d---------\n", new_tid);
 	return new_tid;
 }
 
@@ -172,10 +164,6 @@ __do_fork (void *aux) {
 	/* 1. Read the cpu context to local stack. */
 	memcpy (&if_, parent_if, sizeof (struct intr_frame));
 
-	
-	//printf("parent rsp: %p\n", parent_if->rsp);
-	//printf("child rsp: %p\n", if_.rsp);
-	// printf("---------do_fork : memcpy---------\n");
 	/* 2. Duplicate PT */
 	current->pml4 = pml4_create();
 	if (current->pml4 == NULL)
@@ -185,10 +173,8 @@ __do_fork (void *aux) {
 #ifdef VM
 	supplemental_page_table_init (&current->spt);
 	if (!supplemental_page_table_copy (&current->spt, &parent->spt)){
-		//printf("---------do_fork : spt copy error---------\n");
 		goto error;
 	}
-	//printf("---------do_fork : spt copy end---------\n");
 	// hex_dump(if_.rsp, if_.rsp, USER_STACK - if_.rsp, true);
 #else
 	if (!pml4_for_each (parent->pml4, duplicate_pte, parent))
@@ -202,7 +188,6 @@ __do_fork (void *aux) {
 	 * TODO:       in include/filesys/file.h. Note that parent should not return
 	 * TODO:       from the fork() until this function successfully duplicates
 	 * TODO:       the resources of parent.*/
-	//printf("[1]\n");
 	for (int i = 2; i < FDCOUNT_LIMIT; i++)
 	{
 		struct file *fd = parent->fd_table[i];
@@ -223,7 +208,6 @@ __do_fork (void *aux) {
 	}
 error:
 	current->exit_status = TID_ERROR;
-	// printf("ERROR\n");
 	sema_up(&current->fork_sema);
 	exit(TID_ERROR);
 }
@@ -247,7 +231,6 @@ process_exec (void *f_name) {
 	process_cleanup ();
 	supplemental_page_table_init(&thread_current()->spt);
 	/* And then load the binary */
-	// printf("==========load 시작전 : %d==========\n",thread_current()->tid);
 	success = load (file_name, &_if);
 	// hex_dump(_if.rsp,_if.rsp, USER_STACK - _if.rsp,true);
 
@@ -277,7 +260,6 @@ process_wait (tid_t child_tid UNUSED) {
 	/* XXX: Hint) The pintos exit if process_wait (initd), we recommend you
 	 * XXX:       to add infinite loop here before
 	 * XXX:       implementing the process_wait. */
-	// printf("process_wait 시작\n");
 	struct thread *parent_thread = thread_current();
 	struct thread* child_thread = get_child_process(child_tid);
 	if (child_thread == NULL) {
@@ -288,14 +270,12 @@ process_wait (tid_t child_tid UNUSED) {
     // 깨어나면 child의 exit_status를 얻는다.
 	list_remove(&child_thread->child_elem); // child를 부모 list에서 지운다.
 	sema_up(&child_thread->free_sema);// 내가 받았음을 전달하는 sema
-	// printf("process_wait 끝: %d\n", exit_status);
 	return exit_status;
 }
 
 /* Exit the process. This function is called by thread_exit (). */
 void
 process_exit (void) {
-	// printf("exit 시작\n");
 	struct thread *curr = thread_current();
 	/* TODO: Your code goes here.
 	 * TODO: Implement process termination message (see
@@ -307,13 +287,8 @@ process_exit (void) {
 	file_close(curr->running); // load에서 file close -> process_exit할때 close file_deny_write
 
 	sema_up(&curr->wait_sema); // 종료되었다고 기다리고 있는 부모 thread에게 signal 보냄-> sema_up에서 val을 올려줌
-	/* [TBD] 수민이가 이거 올리면 exit 통과한댔는데 왜 안함 */
-	// printf("process_clean_up 시작\n");
 	process_cleanup(); // pml4를 날림(이 함수를 call 한 thread의 pml4)
-	// printf("process_clean_up 끝\n");
-
 	sema_down(&curr->free_sema); // 부모에게 exit_Status가 정확히 전달되었는지 확인(wait)
-	// printf("bi\n");
 }
 
 /* Free the current process's resources. */
@@ -323,7 +298,6 @@ process_cleanup (void) {
 
 #ifdef VM
 	supplemental_page_table_kill (&curr->spt);
-	// printf("kill\n");
 #endif
 
 	uint64_t *pml4;
@@ -774,16 +748,9 @@ lazy_load_segment (struct page *page, void *aux) {
 	struct file_info *aux_file_info = (struct file_info *)aux;
 
 	file_seek(aux_file_info->file, aux_file_info->offset);
-
-	// printf("aux_file_info->file: %d\n", aux_file_info->file);
-	// printf("aux_file_info->file->pos: %d\n", aux_file_info->file->pos);
-	// printf("aux_file_info->read_bytes: %d\n", aux_file_info->read_bytes);
-	// printf("aux_file_info->zero_bytes: %d\n", aux_file_info->zero_bytes);
-	// printf("aux_file_info->offset: %d\n", aux_file_info->offset);
 	// lock_acquire(&filesys_lock);
 	int result = file_read(aux_file_info->file, page->frame->kva, aux_file_info->read_bytes);
 	// lock_release(&filesys_lock);
-	// printf("result: %d\n", result);
 
 	if ( result != (int)aux_file_info->read_bytes)
 	{
@@ -791,9 +758,7 @@ lazy_load_segment (struct page *page, void *aux) {
 		return false;
 	}
 
-	// printf("[4]\n");
 	memset(page->frame->kva + aux_file_info->read_bytes, 0, aux_file_info->zero_bytes);
-	// printf("[5]\n");
 	
 	return true;
 }
@@ -834,7 +799,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 		aux_file_info->zero_bytes = page_zero_bytes;
 		aux_file_info->writable = writable;
 
-		// printf("writable: %d\n", writable);
 		/* file에서 불러온 세그먼트지만, VM_ANON으로 설정해둠
 		이유 : VM_FILE은 swap-out될 때 변경 내용이 디스크에 기록됨
 		근데, .bss는 writable =1 로 들어오기 때문에, 수정이 가능하고

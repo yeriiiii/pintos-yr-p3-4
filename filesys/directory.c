@@ -90,7 +90,6 @@ lookup (const struct dir *dir, const char *name,
 	ASSERT (dir != NULL);
 	ASSERT (name != NULL);
 
-	// printf("[DEBUG][dir_add]inode_sector: %d\n", inode_sector);
 	for (ofs = 0; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
 			ofs += sizeof e)
 		if (e.in_use && !strcmp (name, e.name)) {
@@ -131,10 +130,6 @@ dir_lookup (const struct dir *dir, const char *name,
  * error occurs. */
 bool
 dir_add (struct dir *dir, const char *name, disk_sector_t inode_sector) {
-	// printf("[DEBUG][dir_add]dir: %p\n", dir);
-	// printf("[DEBUG][dir_add]name: %s\n", name);
-	// printf("[DEBUG][dir_add]inode_sector: %d\n", inode_sector);
-	
 	struct dir_entry e;
 	off_t ofs;
 	bool success = false;

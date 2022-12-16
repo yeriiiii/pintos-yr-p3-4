@@ -188,7 +188,7 @@ fat_create_chain (cluster_t clst) {
             fat_put(i, EOChain); // 새로운 클러스터 할당
             if (clst != 0) // clst가 0이 아니면
                 fat_put(clst, i); // 원래 체인에 새로 할당한 클러스터 번호를 넣어줌
-            return i; // d
+            return i; 
         }
     }    
     return 0;

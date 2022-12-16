@@ -146,7 +146,6 @@ page_fault (struct intr_frame *f) {
 		return;
 #endif
 	/* Count page faults. */
-	// printf("fault addr: %p\n", fault_addr);
 	page_fault_cnt++;
 	exit(-1);
 
