@@ -105,9 +105,12 @@ fsutil_put (char **argv) {
 		PANIC ("%s: invalid file size %d", file_name, size);
 
 	/* Create destination file. */
-	if (!filesys_create (file_name, size))
+	printf("[1]\n");
+	if (!filesys_create(file_name, size))
 		PANIC ("%s: create failed", file_name);
+	printf("[2]\n");
 	dst = filesys_open (file_name);
+	printf("[3]\n");
 	if (dst == NULL)
 		PANIC ("%s: open failed", file_name);
 
@@ -120,7 +123,7 @@ fsutil_put (char **argv) {
 					file_name, size);
 		size -= chunk_size;
 	}
-
+	// printf("do copy\n");
 	/* Finish up. */
 	file_close (dst);
 	free (buffer);
