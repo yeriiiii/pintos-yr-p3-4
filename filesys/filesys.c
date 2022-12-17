@@ -67,6 +67,9 @@ filesys_create (const char *name, off_t initial_size) {
 	bool inode_create_rst = inode_create(inode_sector, initial_size);
 	bool dir_add_rst = dir_add(dir, name, inode_sector);
 
+	// printf("[filesys_create] inode_create_rst %d\n", inode_create_rst);
+	// printf("[filesys_create] dir_add_rst %d\n", dir_add_rst);
+
 	bool success = (dir != NULL && new_clst && inode_create_rst && dir_add_rst);
 
 	if (!success && inode_sector != 0){
@@ -88,10 +91,10 @@ filesys_open(const char *name)
 {
 	struct dir *dir = dir_open_root();// 루트 디렉토리를 연다
 
+
 	struct inode *inode = NULL;
 
 		if (dir != NULL){
-		// printf("dir not NULL\n");
 		dir_lookup(dir, name, &inode); //루트 디렉토리 안에서 name에 해당하는 파일을 찾아서 inode에 넣어준다
 	}
 	dir_close(dir);

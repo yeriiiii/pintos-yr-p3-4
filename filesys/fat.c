@@ -181,7 +181,6 @@ fat_create_chain (cluster_t clst) {
     /* clst(클러스터 인덱싱 번호)로 특정된 클러스터의 뒤에 클러스터를 추가하여 체인을 확장합니다. 
     clst가 0이면 새 체인을 만듭니다. 
     새로 할당된 클러스터의 번호를 반환합니다. */
-    // printf("[1]\n");
 
     for(cluster_t i= 2 ; i <= (fat_fs->fat_length); i++){
         cluster_t value = fat_get(i); // fat[i] 확인
@@ -195,7 +194,7 @@ fat_create_chain (cluster_t clst) {
                 fat_put(clst, i); // 원래 체인에 새로 할당한 클러스터 번호를 넣어줌
                 // printf("[6]\n");
             }
-            // printf("[7]\n");
+            printf("[fat_create_chain] new clst : %d\n", i);
             return i; 
         }
     }    

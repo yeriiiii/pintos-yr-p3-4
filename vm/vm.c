@@ -324,7 +324,7 @@ bool vm_try_handle_fault(struct intr_frame *f UNUSED, void *addr UNUSED,
 	}
 
 	if(!fault_p->writable && write){
-		return false;
+		return;
 	}
 
 	/* write protected page : Copy on Write */
